@@ -38,6 +38,9 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         timeout-minutes: 2
       - run: python -m PyInstaller --clean --noconfirm --windowed --onedir --name Folder explorer.py
+      - name: Bundle LibVLC runtime
+        shell: pwsh
+        run: ./packaging/windows/fetch_vlc.ps1 -Destination dist/Folder/vlc
       - run: python packaging/windows/collect_notices.py
       - name: Install Inno Setup
         run: choco install innosetup -y --no-progress
