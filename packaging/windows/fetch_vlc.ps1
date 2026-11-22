@@ -2,7 +2,7 @@ param([string]$Destination = "vendor/vlc")
 $ErrorActionPreference = 'Stop'
 $version = '3.0.24'
 $name = "vlc-$version-win64.zip"
-$base = "https://download.videolan.org/pub/videolan/vlc/$version/win64"
+$base = "https://download.videolan.org/vlc/$version/win64"
 $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("folder-vlc-" + [guid]::NewGuid())
 New-Item -ItemType Directory -Path $tmp | Out-Null
 try {
