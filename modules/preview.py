@@ -1,4 +1,5 @@
 from pathlib import Path
+from modules.stl_preview import STLPreview
 from modules.media_vlc import VideoPreview, MEDIA_EXTENSIONS
 from modules.photo_viewer import open_file
 from PySide6.QtCore import Qt,QUrl,QSize,QFileInfo
@@ -39,6 +40,7 @@ class Preview(QWidget):
                 for f in islice(p.iterdir(),200):
                     item=QListWidgetItem(icons.icon(QFileInfo(str(f))),f.name); item.setData(Qt.UserRole,str(f)); w.addItem(item)
                 w.itemDoubleClicked.connect(lambda item:self.show_file(item.data(Qt.UserRole)))
+            elif ext=='.stl':w=STLPreview(path)
             elif ext=='.svg':w=QSvgWidget(path)
             elif ext=='.pdf':
                 self.document=QPdfDocument(self); self.document.load(path); w=QPdfView(); w.setDocument(self.document); w.setPageMode(QPdfView.PageMode.MultiPage); w.setZoomMode(QPdfView.ZoomMode.FitToWidth); controls=QWidget(); row=QHBoxLayout(controls); row.setContentsMargins(0,0,0,0)
