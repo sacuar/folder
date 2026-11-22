@@ -1,29 +1,42 @@
 <div align="center">
 
-<img src="assets/folder.svg" width="96" alt="Folder app icon" />
+![Folder banner](assets/brand-cover.svg)
 
 # Folder
 
-**A better way to explore your files.**
+**A customisable Windows file manager with tabs, previews, and tools for everyday file work.**
 
-![Windows](https://img.shields.io/badge/Windows-10%20%7C%2011-2563eb) ![License](https://img.shields.io/badge/license-MIT-blue) ![Release](https://img.shields.io/github/v/release/sacuar/folder)
+[![Windows](https://img.shields.io/badge/platform-Windows%2010%2F11-2563eb)](https://github.com/sacuar/folder#install--try) [![Latest release](https://img.shields.io/github/v/release/sacuar/folder?label=latest%20release)](https://github.com/sacuar/folder/releases/latest) [![Issues](https://img.shields.io/github/issues/sacuar/folder)](https://github.com/sacuar/folder/issues)
 
-[Download Windows installer](https://github.com/sacuar/folder/releases) · [Add-ons](docs/ADDONS.md) · [Changes](CHANGELOG.md)
+**[DOWNLOAD / RELEASES](https://github.com/sacuar/folder/releases)** · **[VIEW SOURCE](https://github.com/sacuar/folder)** · [More SACUAR apps](https://github.com/sacuar)
 
 </div>
 
-## Screenshots
-Actual running application captures (demo files; Windows CI). These images follow the latest successful release.
+## Why use Folder?
 
-### Workspace
+- Navigate with tabs, a folder tree, multiple view modes and a configurable toolbar.
+- Preview supported files including images, PDFs and selected document types.
+- Explore optional local add-ons, search integration, and file-management tools.
 
-![Folder workspace — tabs, sidebar, thumbnails and preview](https://github.com/sacuar/folder/releases/latest/download/workspace.png)
+## Install / try
 
-### Add-on manager
+Open **[GitHub Releases](https://github.com/sacuar/folder/releases)**, choose the latest suitable Windows asset, review its release notes and known limitations, and follow the installer instructions. If no verified installer is available, use the documented source-build instructions below. Download only from the official project release page.
 
-![Folder built-in providers and add-ons](https://github.com/sacuar/folder/releases/latest/download/addons.png)
+**Release note:** Windows is the primary platform. Installer/build status and supported features depend on the published release. Linux support remains experimental; no default shell replacement is implied.
 
-[View release assets](https://github.com/sacuar/folder/releases/latest).
+**Licence:** [MIT](LICENSE). Add-ons and bundled dependencies may have separate licences.
+
+## Screenshots and first look
+
+The current README contains a [workspace image](https://github.com/sacuar/folder/releases/latest/download/workspace.png) from release assets where published. The banner above is branding artwork, not an actual application screenshot.
+
+## Get involved
+
+[Changes](CHANGELOG.md) · [Add-ons](docs/ADDONS.md) · [Contribute](CONTRIBUTING.md) · [Report a bug](https://github.com/sacuar/folder/issues/new). Please report your Windows version, application version and steps to reproduce. Screenshots of reproducible issues help.
+
+---
+
+## Detailed documentation
 
 ## Available add-ons and built-in providers
 | Provider | Availability |
