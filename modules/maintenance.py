@@ -69,7 +69,7 @@ def clear_cache(host):
     from modules.thumbnails import ThumbnailModel
     for model in host.findChildren(ThumbnailModel):model.cache.clear()
     host.favicons.clear();host.refresh_sidebar()
-    QMessageBox.information(host,'Clear cache','Folder thumbnail and website-icon caches cleared. No Windows or personal files removed.')
+    QMessageBox.information(host,'Clear cache','Folder thumbnail and website-icon caches cleared. No personal files removed.')
 def windows_settings(url):
     if sys.platform=='win32':QDesktopServices.openUrl(QUrl(url))
 def installation_maintenance(host):
@@ -92,9 +92,9 @@ def installation_maintenance(host):
 def add_tools(host):
     menu=host.menuBar().addMenu('Tools')
     from modules.build_manager import open_manager
-    menu.addAction('Old Build Manager…',lambda:open_manager(host))
+    menu.addAction('Old Build Manager…',lambda:open_manager(host)).setEnabled(sys.platform=='win32')
     menu.addAction('Installer maintenance (legacy)…',lambda:installation_maintenance(host)).setEnabled(sys.platform=='win32')
-    menu.addAction('Everything search…',lambda:__import__('modules.everything_search',fromlist=['open_search']).open_search(host))
+    menu.addAction('Everything search…' if sys.platform=='win32' else 'Search files…',lambda:__import__('modules.everything_search',fromlist=['open_search']).open_search(host))
     menu.addAction('File count and drive usage…',lambda:storage(host))
     menu.addAction('Find duplicate files…',lambda:duplicates(host))
     menu.addAction('Clear Folder cache…',lambda:clear_cache(host));menu.addSeparator()
