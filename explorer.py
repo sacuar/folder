@@ -11,7 +11,8 @@ from modules.updates import Updater
 from version import VERSION
 from modules.workspace import apply_workspace_theme, configure_gallery, populate_places, configure_commands
 from PySide6.QtCore import QSize
-from addons import load_addons
+from addons import load_addons, manage_addons
+from modules.photo_viewer import open_file
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -42,7 +43,7 @@ class Pane(QWidget):
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
         mode=QComboBox(); mode.addItems(['Thumbnails','Details','Large thumbnails','Small thumbnails']); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
         self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
-        self.preview=Preview(); self.preview_toggle.toggled.connect(self.toggle_preview)
+        self.preview=Preview(); self.preview.prefs=window.prefs; self.preview_toggle.toggled.connect(self.toggle_preview)
         layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,3); split.setStretchFactor(1,2); split.setSizes([720,320]); self.splitter=split
         self.preview.setVisible(self.preview_toggle.isChecked()); self.change_mode(mode.currentIndex(),persist=False)
         self.model.directoryLoaded.connect(lambda _:self.status())
@@ -52,8 +53,8 @@ class Pane(QWidget):
         self.go(path)
     def change_mode(self,n,persist=True):
         self.stack.setCurrentIndex(0 if n==1 else 1)
-        size={0:104,2:168,3:56}.get(n,104)
-        self.gallery.setIconSize(QSize(size,size)); self.gallery.setGridSize(QSize(size+38,size+47))
+        size={0:64,2:120,3:32}.get(n,64)
+        self.gallery.setIconSize(QSize(size,size)); self.gallery.setGridSize(QSize(size+40,size+34))
         if persist:
             self.host.prefs['view_mode']=n; self.host.save()
         self.status()
@@ -85,7 +86,7 @@ class Pane(QWidget):
     def open(self,index):
         path=self.model.filePath(index)
         if os.path.isdir(path): self.go(path)
-        else: QDesktopServices.openUrl(QUrl.fromLocalFile(path))
+        else: open_file(path,self.host.prefs)
     def selected(self): return [self.model.filePath(i) for i in (self.view.selectionModel().selectedRows(0) if self.stack.currentIndex()==0 else self.gallery.selectionModel().selectedIndexes())]
     def extract_archive(self):
         files=self.selected()
@@ -105,7 +106,7 @@ class Pane(QWidget):
 class Explorer(QMainWindow):
     def __init__(self):
         super().__init__(); self.prefs=settings; self.clip=[]; self.cut=False; self.resize(1400,850); self.setMinimumSize(760,480); self.setWindowTitle('Folder'); self.last_pane=None
-        root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(16); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for c in range(1,4): self.tree.hideColumn(c)
         self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); nav.setMinimumWidth(160)
         populate_places(self.side)
@@ -118,7 +119,7 @@ class Explorer(QMainWindow):
         configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
-        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
+        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
         self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD)
     def addon_folder(self):
         from addons import ADDON_DIR
@@ -197,6 +198,11 @@ class Explorer(QMainWindow):
         d=QDialog(self); d.setWindowTitle('Appearance'); l=QVBoxLayout(d); theme=QComboBox(); theme.addItems(['Dark','Light']); theme.setCurrentText(self.prefs.get('theme','Dark')); l.addWidget(theme); theme.currentTextChanged.connect(lambda s:(self.prefs.update(theme=s),self.save())); l.addWidget(QLabel('Background opacity')); slider=QSlider(Qt.Horizontal); slider.setRange(0,70); slider.setValue(self.prefs.get('opacity',20)); slider.valueChanged.connect(lambda n:(self.prefs.update(opacity=n),self.save())); l.addWidget(slider)
         for name,fn in [('Choose global image',lambda:self.background()),('Choose folder image',lambda:self.background(True)),('Clear global image',lambda:(self.prefs.pop('image',None),self.save())),('Clear folder image',lambda:(self.prefs.get('folders',{}).pop(self.active().path,None),self.save()))]:
             b=QPushButton(name); b.clicked.connect(fn); l.addWidget(b)
+        photo=QCheckBox('Use Quick Photo Viewer for images'); photo.setChecked(self.prefs.get('quick_photo_viewer',True)); photo.toggled.connect(lambda v:(self.prefs.update(quick_photo_viewer=v),self.save())); l.addWidget(photo)
+        def choose_viewer():
+            path,_=QFileDialog.getOpenFileName(self,'Choose QuickPhotoViewer.exe','','Executable (*.exe)')
+            if path:self.prefs['photo_viewer_path']=path; self.save()
+        b=QPushButton('Locate Quick Photo Viewer…'); b.clicked.connect(choose_viewer); l.addWidget(b)
         d.exec()
     def apply_theme(self):
         apply_workspace_theme(self, self.prefs, IS_WINDOWS)
