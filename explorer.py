@@ -163,6 +163,8 @@ class Explorer(QMainWindow):
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
         self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self)
         view_menu=self.menuBar().addMenu('View');view_menu.addAction('Customise toolbar…',lambda:options(self,'Toolbar'));view_menu.addAction('Folder options…',lambda:options(self))
+        from modules.plugin_catalog import Manager
+        self.plugin_manager=Manager(self)
         menu_popup=QMenu(self)
         for action in self.menuBar().actions():
             if action.menu():menu_popup.addMenu(action.menu())

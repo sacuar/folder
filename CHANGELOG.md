@@ -1,3 +1,6 @@
+# 0.7.6
+- Opt-in GitHub plugin catalogue, pinned integrity checks, 3MF preview, storage and conversion tools.
+
 # Changelog
 
 ## 0.7.5

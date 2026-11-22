@@ -1,3 +1,4 @@
+from modules.plugin_catalog import THUMBS
 from PySide6.QtCore import Qt, QSize, QThreadPool, QRunnable, QObject, Signal, QTimer
 from PySide6.QtGui import QImageReader, QPixmap, QIcon
 from PySide6.QtWidgets import QFileSystemModel
@@ -17,7 +18,8 @@ class Job(QRunnable):
     def run(self):
         img=QImage()
         try:
-            if Path(self.path).suffix.lower() in VIDEO_EXTENSIONS:
+            if Path(self.path).suffix.lower() in THUMBS:img=THUMBS[Path(self.path).suffix.lower()](self.path)
+            elif Path(self.path).suffix.lower() in VIDEO_EXTENSIONS:
                 img=video_frame(self.path)
             elif self.path.lower().endswith('.stl'):
                 img=render_mesh(read_mesh(self.path),192)
@@ -53,7 +55,7 @@ class ThumbnailModel(QFileSystemModel):
         if role==Qt.DecorationRole and index.column()==0 and index.isValid():
             p=self.filePath(index)
             ext=Path(p).suffix.lower()
-            if self.generate and self.prefs.get('thumbnails',True) and (ext in ('.jpg','.jpeg','.png','.webp','.bmp','.gif','.tif','.tiff','.svg','.pdf','.stl') or (ext in VIDEO_EXTENSIONS and self.prefs.get('video_thumbnails',True))):
+            if self.generate and self.prefs.get('thumbnails',True) and (ext in ('.jpg','.jpeg','.png','.webp','.bmp','.gif','.tif','.tiff','.svg','.pdf','.stl') or ext in THUMBS or (ext in VIDEO_EXTENSIONS and self.prefs.get('video_thumbnails',True))):
                 if p in self.cache:
                     icon=self.cache[p]; self.cache.move_to_end(p)
                     if icon is not None:return icon

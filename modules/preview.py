@@ -41,6 +41,7 @@ class Preview(QWidget):
                 for f in islice(p.iterdir(),200):
                     item=QListWidgetItem(icons.icon(QFileInfo(str(f))),f.name); item.setData(Qt.UserRole,str(f)); w.addItem(item)
                 w.itemDoubleClicked.connect(lambda item:self.show_file(item.data(Qt.UserRole)))
+            elif ext in __import__('modules.plugin_catalog',fromlist=['PREVIEWS']).PREVIEWS:w=__import__('modules.plugin_catalog',fromlist=['PREVIEWS']).PREVIEWS[ext](path)
             elif ext=='.stl':w=STLPreview(path)
             elif ext=='.svg':w=FitPreview(path,True)
             elif ext=='.pdf':

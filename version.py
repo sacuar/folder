@@ -1,3 +1,3 @@
 """Single release version for application, installer and CI."""
-VERSION = "0.7.5"
+VERSION = "0.7.6"
 REPOSITORY = "sacuar/folder"
