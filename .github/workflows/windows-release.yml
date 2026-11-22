@@ -37,7 +37,8 @@ jobs:
           python explorer.py --smoke-test
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         timeout-minutes: 2
-      - run: python -m PyInstaller --clean --noconfirm --windowed --onedir --name Folder explorer.py
+      - run: python tools/build_icon.py
+      - run: python -m PyInstaller --clean --noconfirm --windowed --onedir --name Folder --icon assets/folder.ico --collect-all imageio_ffmpeg explorer.py
       - name: Bundle LibVLC runtime
         shell: pwsh
         run: ./packaging/windows/fetch_vlc.ps1 -Destination dist/Folder/vlc
