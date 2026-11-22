@@ -1,3 +1,7 @@
+# 0.7.8
+- Use a background HTTPS downloader with GitHub API fallback, exact integrity verification, specific failure messages and verified manual installation.
+- Require real remote plugin download and synthetic 3MF thumbnail tests before release.
+
 # 0.7.7
 - Route QPV image launches to complete installed packages rather than obsolete remembered build paths.
 - Internal image viewer fallback instead of broken Windows image associations; image viewer settings and targeted reset.
