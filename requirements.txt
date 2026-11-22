@@ -5,3 +5,5 @@ pyinstaller
 python-docx
 
 python-vlc
+
+imageio-ffmpeg
