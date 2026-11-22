@@ -7,6 +7,8 @@ from send2trash import send2trash
 from modules.thumbnails import ThumbnailModel
 from modules.preview import Preview
 from modules.archives import extract
+from modules.updates import Updater
+from version import VERSION
 from modules.workspace import apply_workspace_theme, configure_gallery, populate_places, configure_commands
 from PySide6.QtCore import QSize
 from addons import load_addons
@@ -117,6 +119,7 @@ class Explorer(QMainWindow):
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
+        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD)
     def addon_folder(self):
         from addons import ADDON_DIR
         ADDON_DIR.mkdir(parents=True,exist_ok=True); QDesktopServices.openUrl(QUrl.fromLocalFile(str(ADDON_DIR)))
@@ -199,4 +202,6 @@ class Explorer(QMainWindow):
         apply_workspace_theme(self, self.prefs, IS_WINDOWS)
 
 if __name__=='__main__':
-    app=QApplication(sys.argv); app.setStyle('Fusion'); w=Explorer(); w.show(); sys.exit(app.exec())
+    app=QApplication(sys.argv); app.setApplicationName('Folder'); app.setApplicationVersion(VERSION); app.setStyle('Fusion'); w=Explorer(); w.show()
+    if '--smoke-test' in sys.argv: QTimer.singleShot(1200,app.quit)
+    sys.exit(app.exec())
