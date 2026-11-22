@@ -2,6 +2,7 @@ from PySide6.QtCore import Qt, QSize, QThreadPool, QRunnable, QObject, Signal, Q
 from PySide6.QtGui import QImageReader, QPixmap, QIcon
 from PySide6.QtWidgets import QFileSystemModel
 from collections import OrderedDict
+from modules.icons import FileIcons
 import os
 from PySide6.QtPdf import QPdfDocument
 from PySide6.QtSvg import QSvgRenderer
@@ -35,7 +36,7 @@ class Job(QRunnable):
         self.signals.done.emit(self.path,img)
 class ThumbnailModel(QFileSystemModel):
     def __init__(self,parent=None):
-        super().__init__(parent); self.cache=OrderedDict(); self.pending=set(); self.signals=Signals(self); self.signals.done.connect(self.finished); self.pool=QThreadPool(self); self.pool.setMaxThreadCount(2); self.dataChanged.connect(self.invalidate_changed)
+        super().__init__(parent); self.file_icons=FileIcons(); self.setIconProvider(self.file_icons); self.cache=OrderedDict(); self.pending=set(); self.signals=Signals(self); self.signals.done.connect(self.finished); self.pool=QThreadPool(self); self.pool.setMaxThreadCount(2); self.dataChanged.connect(self.invalidate_changed)
     def invalidate_changed(self,first,last,roles):
         if roles and all(r==Qt.DecorationRole for r in roles):return
         for row in range(first.row(),last.row()+1):
