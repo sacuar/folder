@@ -1,0 +1,2 @@
+# Contributing
+Fork, create a feature branch, install requirements in a Python 3.12 virtual environment, and run `python -m unittest discover -s tests` and `python -m compileall -q explorer.py thumbnails.py integration.py addons.py`. Test on Windows using disposable files. Report OS build, reproduction steps, expected and actual results. Keep registry edits scoped to the current user, reversible, and opt-in. Avoid unrelated changes. Submit a focused pull request with test evidence. Contributions are MIT licensed.

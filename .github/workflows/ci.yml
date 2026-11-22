@@ -1,0 +1,26 @@
+name: Cross-platform builds
+on: [push, pull_request, workflow_dispatch]
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    env:
+      QT_QPA_PLATFORM: offscreen
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1 libxkbcommon-x11-0 libxcb-cursor0 libpulse0
+      - run: pip install -r requirements.txt
+      - run: python -m compileall -q explorer.py modules platform_adapters integration.py addons.py
+      - run: python -m unittest discover -s tests
+      - run: python -m PyInstaller --noconfirm --windowed --onedir --name Folder explorer.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Folder-${{ runner.os }}
+          path: dist/Folder/

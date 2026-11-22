@@ -1,0 +1,2 @@
+# Ubuntu build
+Install python3, python3-venv, libegl1, libgl1, libxcb-cursor0, libxkbcommon-x11-0 and libpulse0 on Ubuntu 24.04. Run bash run-linux.sh or bash build-linux.sh. Launch dist/Folder/Folder after building. Desktop integration registers an optional directory-opening application; it does not change defaults. DEB, AppImage and Flatpak are future packaging targets. Build on the oldest supported distro to reduce glibc compatibility issues. Qt multimedia codec availability varies by platform.
