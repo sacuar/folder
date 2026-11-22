@@ -30,7 +30,8 @@ PATHS={
  'settings':'<circle cx="12" cy="12" r="3"/><path d="m10 3-1 3-3 1-3 3 2 2-1 4 3 3 3-1 2 3 3-2 3 1 3-3-1-3 1-3-3-3-3 1-2-4z"/>',
  'plugins':'<path d="M3 3h7v3a2 2 0 1 0 4 0V3h7v7h-3a2 2 0 1 0 0 4h3v7H3v-7h3a2 2 0 1 0 0-4H3z"/>',
  'archive':'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 3v3m-2 2h4m-4 3h4m-4 3h4m-2 2v3"/>',
- 'app':'<rect x="1" y="1" width="22" height="22" rx="5" fill="#343b44" stroke="none"/><path d="M4 7V5h7l2 3h7v11H4z" fill="#f5cc75" stroke="none"/><rect x="6" y="10" width="12" height="8" rx="1" fill="#f6f8fa" stroke="none"/><path d="M8 12h5" stroke="#538fde"/><path d="M8 15h8" stroke="#54a987"/>'
+ 'camera':'<rect x="3" y="6" width="18" height="14" rx="2"/><path d="M8 6l2-3h4l2 3"/><circle cx="12" cy="13" r="4"/>',
+ 'app':'<rect x="1" y="1" width="22" height="22" rx="5" fill="#303943" stroke="none"/><path d="M4 8V5h6l3 3h7v11H4z" fill="#FFD16C" stroke="none"/><circle cx="12" cy="13.5" r="4" fill="#286FBD" stroke="none"/><path d="m10.4 15.1 3.2-3.2" stroke="#F8FAFC" stroke-width="1.1"/><circle cx="14.4" cy="16" r=".7" fill="#6EE0AD" stroke="none"/>'
 }
 @lru_cache(maxsize=128)
 def icon(name,colour='#a9b9ca'):
