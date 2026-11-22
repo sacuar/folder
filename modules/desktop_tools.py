@@ -43,7 +43,19 @@ def set_default(host,enable):
     except Exception as e:QMessageBox.warning(host,'Windows integration',str(e))
 def properties(host,path):
     if not WIN:
-        QMessageBox.information(host,'Properties',str(path));return
+        p = Path(path)
+        try:
+            st = p.stat()
+            from datetime import datetime
+            details = ("Name: {}\\nPath: {}\\nType: {}\\nSize: {:,} bytes\\n"
+                       "Modified: {}\\nPermissions: {}").format(
+                           p.name, p, "Directory" if p.is_dir() else "File",
+                           st.st_size, datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M"),
+                           oct(st.st_mode & 0o777))
+            QMessageBox.information(host, 'File properties', details)
+        except OSError as exc:
+            QMessageBox.warning(host, 'Properties', str(exc))
+        return
     from ctypes import wintypes
     class Info(ctypes.Structure):
         _fields_=[('cbSize',wintypes.DWORD),('fMask',ctypes.c_ulong),('hwnd',wintypes.HWND),('lpVerb',wintypes.LPCWSTR),('lpFile',wintypes.LPCWSTR),('lpParameters',wintypes.LPCWSTR),('lpDirectory',wintypes.LPCWSTR),('nShow',ctypes.c_int),('hInstApp',wintypes.HINSTANCE),('lpIDList',ctypes.c_void_p),('lpClass',wintypes.LPCWSTR),('hkeyClass',wintypes.HKEY),('dwHotKey',wintypes.DWORD),('hIcon',wintypes.HANDLE),('hProcess',wintypes.HANDLE)]
