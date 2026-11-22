@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.5
+- Native Old Build Manager with similar-name discovery, selectable candidates, protected locations, registry reports and CSV export.
+- Background scans with cancellation, explicit Recycle Bin confirmation and path revalidation.
+
+
 ## 0.7.4
 - Repair malformed maintenance PowerShell script; preserve review-only cleanup protections.
 - Add Windows PowerShell syntax check and synthetic scan test before packaging.

@@ -91,7 +91,9 @@ def installation_maintenance(host):
     proc.start()
 def add_tools(host):
     menu=host.menuBar().addMenu('Tools')
-    menu.addAction('Review old installations…',lambda:installation_maintenance(host)).setEnabled(sys.platform=='win32')
+    from modules.build_manager import open_manager
+    menu.addAction('Old Build Manager…',lambda:open_manager(host))
+    menu.addAction('Installer maintenance (legacy)…',lambda:installation_maintenance(host)).setEnabled(sys.platform=='win32')
     menu.addAction('Everything search…',lambda:__import__('modules.everything_search',fromlist=['open_search']).open_search(host))
     menu.addAction('File count and drive usage…',lambda:storage(host))
     menu.addAction('Find duplicate files…',lambda:duplicates(host))
