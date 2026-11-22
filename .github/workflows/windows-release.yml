@@ -30,6 +30,14 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -r requirements.txt
       - run: python -m compileall -q explorer.py modules platform_adapters version.py
+      - name: Verify maintenance script and scan
+        shell: powershell
+        run: |
+          $tokens=$null; $errors=$null
+          [void][System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path maintenance.ps1).Path,[ref]$tokens,[ref]$errors)
+          if ($errors.Count) { $errors | Format-List; throw 'Maintenance script syntax failed' }
+          powershell.exe -NoProfile -STA -ExecutionPolicy Bypass -File maintenance.ps1 -App Folder -SelfTest
+          if ($LASTEXITCODE -ne 0) { throw 'Maintenance self-test failed' }
       - name: GUI smoke test
         shell: pwsh
         run: |

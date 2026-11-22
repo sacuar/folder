@@ -1,7 +1,8 @@
-param([ValidateSet('QuickPhotoViewer','Lumen','CaptureForge','Folder','All')][string]$App='All',[string]$ProtectPath='')
+param([ValidateSet('QuickPhotoViewer','Lumen','CaptureForge','Folder','All')][string]$App='All',[string]$ProtectPath='',[switch]$SelfTest)
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type -AssemblyName Microsoft.VisualBasic
+$ErrorActionPreference='Stop'
 $names=@{QuickPhotoViewer='quick[ _-]*photo[ _-]*viewer(?:[ _-]*pro)?';Lumen='lumen';CaptureForge='capture[ _-]*forge';Folder='folder'}
 $pattern=if($App -eq 'All'){($names.Values -join '|')}else{$names[$App]}
 $regex='(?i)^(?:'+$pattern+')(?:[ _.-]*(?:v(?:ersion)?[ _.-]*)?\d[\w.-]*|[ _-]*(?:build|setup|installer|portable|working|source)[\w.-]*)*$'
@@ -52,12 +53,27 @@ $worker={
     $name=[IO.Path]::GetFileName($child)
     if($name -in @('Windows','$Recycle.Bin','System Volume Information','WinSxS','.git','node_modules','.venv','WindowsApps','Package Cache')){continue}
     try{if(([IO.File]::GetAttributes($child) -band [IO.FileAttributes]::ReparsePoint) -ne 0){continue}}catch{continue}
-    if($name -match $regex -and ($name -notmatch '(?i)^folder
+    if($name -match $regex -and ($name -notmatch '(?i)^folder$' -or [IO.File]::Exists((Join-Path $child 'Folder.exe')) -or [IO.File]::Exists((Join-Path $child 'explorer.py')))){[pscustomobject]@{Kind='Possible app folder';Name=$name;Path=$child}}
     $stack.Push($child)
    }
   }catch{}
  }
  [pscustomobject]@{Kind='Scan summary';Name="$visited folders checked";Path=$(if($stack.Count){'Search limit reached; select a narrower folder'}else{'Accessible folders completed'})}
+}
+if($SelfTest){
+ $testRoot=Join-Path ([IO.Path]::GetTempPath()) ('FolderMaintenanceTest-'+[guid]::NewGuid())
+ try{
+  [void][IO.Directory]::CreateDirectory($testRoot)
+  [void][IO.Directory]::CreateDirectory((Join-Path $testRoot 'Folder'))
+  [void][IO.Directory]::CreateDirectory((Join-Path $testRoot 'Folder-0.1'))
+  [IO.File]::WriteAllText((Join-Path $testRoot 'Folder-0.1-Setup.exe'),'synthetic')
+  $result=@(& $worker (ConvertTo-Json -InputObject @($testRoot) -Compress) '(?i)^folder(?:[ -][\w.-]+)?$')
+  if(!($result|Where-Object{$_.Kind -eq 'Build / installer' -and $_.Name -eq 'Folder-0.1-Setup.exe'})){throw 'Maintenance test: executable matching failed'}
+  if($result|Where-Object{$_.Kind -eq 'Possible app folder' -and $_.Name -eq 'Folder'}){throw 'Maintenance test: generic folder incorrectly matched'}
+  if(!($result|Where-Object{$_.Kind -eq 'Possible app folder' -and $_.Name -eq 'Folder-0.1'})){throw 'Maintenance test: versioned folder missing'}
+  Write-Output 'Maintenance scan self-test passed'
+ }finally{Remove-Item -LiteralPath $testRoot -Recurse -Force}
+ exit 0
 }
 function Scan($roots){
  if($script:job -and $script:job.State -eq 'Running'){return}
@@ -86,196 +102,7 @@ Button 'Recycle selected old file' {
   foreach($root in @($ProtectPath,$env:ProgramFiles,[Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),$env:WINDIR,(Join-Path $env:LOCALAPPDATA 'Programs'),$env:ProgramData)|Where-Object{$_}){if($p.StartsWith(([IO.Path]::GetFullPath($root).TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)){throw 'Use the installed application uninstaller.'}}
   if((Get-Item -LiteralPath $p).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Links are not removed.'}
   if([IO.Path]::GetFileNameWithoutExtension($p) -notmatch $regex){throw 'Name no longer matches.'}
-  if([IO.Path]::GetFileNameWithoutExtension($p) -match '(?i)^folder
-  if(@(Get-Process -ErrorAction SilentlyContinue|Where-Object{try{$_.Path -eq $p}catch{$false}}).Count){throw 'Close this running copy first.'}
-  if([Windows.Forms.MessageBox]::Show("Move ONLY this file to the Recycle Bin? Review its path. $p",'Confirm old build','YesNo','Warning') -eq 'Yes'){
-   [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin','ThrowException');$grid.Rows.Remove($grid.CurrentRow)
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Remove stale startup entry' {
- if(!$grid.CurrentRow -or $grid.CurrentRow.Cells[0].Value -ne 'Startup registry'){return}
- $parts=([string]$grid.CurrentRow.Cells[2].Value).Split('|',2)
- if($parts.Count -ne 2 -or $parts[0] -ne 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -or $parts[1] -notmatch $regex){return}
- try{
-  $key=Get-Item -LiteralPath $parts[0];$command=[string]$key.GetValue($parts[1])
-  if($command -match '^\s*"([^"]+\.exe)"'){$exe=$Matches[1]}elseif($command -match '^\s*([^\s"]+\.exe)(?:\s|$)'){$exe=$Matches[1]}else{throw 'Cannot safely determine executable path.'}
-  $exe=[Environment]::ExpandEnvironmentVariables($exe)
-  if(![IO.Path]::IsPathRooted($exe) -or (Test-Path -LiteralPath $exe)){throw 'Target still exists or cannot be verified. Use Windows Startup Apps.'}
-  if([Windows.Forms.MessageBox]::Show("Remove this missing-target startup value only? $command. A backup is saved first.",'Stale startup entry','YesNo','Warning') -eq 'Yes'){
-   $backup=Join-Path $env:LOCALAPPDATA 'SACUAR\MaintenanceBackups';New-Item -ItemType Directory -Force $backup|Out-Null
-   $name=Join-Path $backup ("Run-"+[guid]::NewGuid()+".reg")
-   & reg.exe export 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run' $name /y|Out-Null
-   if($LASTEXITCODE -ne 0){throw 'Registry backup failed.'}
-   Remove-ItemProperty -LiteralPath $parts[0] -Name $parts[1];$grid.Rows.Remove($grid.CurrentRow);$status.Text="Backup: $name"
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Export CSV' {
- $d=New-Object Windows.Forms.SaveFileDialog;$d.Filter='CSV (*.csv)|*.csv';$d.FileName="$App-maintenance.csv"
- if($d.ShowDialog() -eq 'OK'){@($grid.Rows|ForEach-Object{[pscustomobject]@{Type=$_.Cells[0].Value;Name=$_.Cells[1].Value;Path=$_.Cells[2].Value}})|Export-Csv -LiteralPath $d.FileName -NoTypeInformation -Encoding UTF8};$d.Dispose()
-}
-$timer=New-Object Windows.Forms.Timer;$timer.Interval=300
-$timer.Add_Tick({
- if(!$script:job){return}
- foreach($r in @(Receive-Job $script:job -ErrorAction SilentlyContinue)){
-  $id="$($r.Kind)|$($r.Path)"
-  if(!$script:seen.ContainsKey($id)){Row $r.Kind $r.Name $r.Path;$script:seen[$id]=$true}
- }
- if($script:job.State -notin @('Running','NotStarted')){$status.Text="Scan $($script:job.State). $($grid.Rows.Count) entries; review before removal.";Remove-Job $script:job -Force -ErrorAction SilentlyContinue;$script:job=$null}
-})
-$timer.Start()
-$form.Add_FormClosed({$timer.Stop();if($script:job){Stop-Job $script:job -ErrorAction SilentlyContinue;Remove-Job $script:job -Force -ErrorAction SilentlyContinue}})
-[void]$form.ShowDialog()
- -or [IO.File]::Exists((Join-Path $child 'Folder.exe')) -or [IO.File]::Exists((Join-Path $child 'explorer.py')))){[pscustomobject]@{Kind='Possible app folder';Name=$name;Path=$child}}
-    $stack.Push($child)
-   }
-  }catch{}
- }
- [pscustomobject]@{Kind='Scan summary';Name="$visited folders checked";Path=$(if($stack.Count){'Search limit reached; select a narrower folder'}else{'Accessible folders completed'})}
-}
-function Scan($roots){
- if($script:job -and $script:job.State -eq 'Running'){return}
- if($script:job){Remove-Job $script:job -Force -ErrorAction SilentlyContinue}
- $grid.Rows.Clear();$script:seen=@{};Inventory
- $json=ConvertTo-Json -InputObject @($roots) -Compress
- $script:job=Start-Job -ScriptBlock $worker -ArgumentList $json,$regex
- $status.Text='Scanning in background. No changes are being made.'
-}
-Button 'Quick scan' {Scan @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('MyDocuments'),(Join-Path $env:USERPROFILE 'Downloads'),(Join-Path $env:LOCALAPPDATA 'Programs'),$env:ProgramFiles,[Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),(Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup'))}
-Button 'Scan fixed drives' {Scan @([IO.DriveInfo]::GetDrives()|Where-Object{$_.DriveType -eq 'Fixed' -and $_.IsReady}|ForEach-Object{$_.RootDirectory.FullName})}
-Button 'Scan folder' {$d=New-Object Windows.Forms.FolderBrowserDialog;if($d.ShowDialog() -eq 'OK'){Scan @($d.SelectedPath)};$d.Dispose()}
-Button 'Cancel scan' {if($script:job){Stop-Job $script:job -ErrorAction SilentlyContinue;$status.Text='Scan stopped.'}}
-Button 'Open selected location' {
- if(!$grid.CurrentRow){return};$p=[string]$grid.CurrentRow.Cells[2].Value
- if($p -and (Test-Path -LiteralPath $p -PathType Container)){Start-Process explorer.exe -ArgumentList ('"'+$p+'"')}
- elseif($p -and (Test-Path -LiteralPath $p -PathType Leaf)){Start-Process explorer.exe -ArgumentList ('/select,"'+$p+'"')}
-}
-Button 'Installed apps / uninstall' {Start-Process 'ms-settings:appsfeatures'}
-Button 'Running processes' {Start-Process taskmgr.exe}
-Button 'Recycle selected old file' {
- if(!$grid.CurrentRow -or $grid.CurrentRow.Cells[0].Value -ne 'Build / installer'){return}
- try{
-  $p=[IO.Path]::GetFullPath([string]$grid.CurrentRow.Cells[2].Value)
-  if(!(Test-Path -LiteralPath $p -PathType Leaf)){throw 'File no longer exists.'}
-  foreach($root in @($ProtectPath,$env:ProgramFiles,[Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),$env:WINDIR,(Join-Path $env:LOCALAPPDATA 'Programs'),$env:ProgramData)|Where-Object{$_}){if($p.StartsWith(([IO.Path]::GetFullPath($root).TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)){throw 'Use the installed application uninstaller.'}}
-  if((Get-Item -LiteralPath $p).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Links are not removed.'}
-  if([IO.Path]::GetFileNameWithoutExtension($p) -notmatch $regex){throw 'Name no longer matches.'}
-  if(@(Get-Process -ErrorAction SilentlyContinue|Where-Object{try{$_.Path -eq $p}catch{$false}}).Count){throw 'Close this running copy first.'}
-  if([Windows.Forms.MessageBox]::Show("Move ONLY this file to the Recycle Bin? Review its path. $p",'Confirm old build','YesNo','Warning') -eq 'Yes'){
-   [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin','ThrowException');$grid.Rows.Remove($grid.CurrentRow)
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Remove stale startup entry' {
- if(!$grid.CurrentRow -or $grid.CurrentRow.Cells[0].Value -ne 'Startup registry'){return}
- $parts=([string]$grid.CurrentRow.Cells[2].Value).Split('|',2)
- if($parts.Count -ne 2 -or $parts[0] -ne 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -or $parts[1] -notmatch $regex){return}
- try{
-  $key=Get-Item -LiteralPath $parts[0];$command=[string]$key.GetValue($parts[1])
-  if($command -match '^\s*"([^"]+\.exe)"'){$exe=$Matches[1]}elseif($command -match '^\s*([^\s"]+\.exe)(?:\s|$)'){$exe=$Matches[1]}else{throw 'Cannot safely determine executable path.'}
-  $exe=[Environment]::ExpandEnvironmentVariables($exe)
-  if(![IO.Path]::IsPathRooted($exe) -or (Test-Path -LiteralPath $exe)){throw 'Target still exists or cannot be verified. Use Windows Startup Apps.'}
-  if([Windows.Forms.MessageBox]::Show("Remove this missing-target startup value only? $command. A backup is saved first.",'Stale startup entry','YesNo','Warning') -eq 'Yes'){
-   $backup=Join-Path $env:LOCALAPPDATA 'SACUAR\MaintenanceBackups';New-Item -ItemType Directory -Force $backup|Out-Null
-   $name=Join-Path $backup ("Run-"+[guid]::NewGuid()+".reg")
-   & reg.exe export 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run' $name /y|Out-Null
-   if($LASTEXITCODE -ne 0){throw 'Registry backup failed.'}
-   Remove-ItemProperty -LiteralPath $parts[0] -Name $parts[1];$grid.Rows.Remove($grid.CurrentRow);$status.Text="Backup: $name"
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Export CSV' {
- $d=New-Object Windows.Forms.SaveFileDialog;$d.Filter='CSV (*.csv)|*.csv';$d.FileName="$App-maintenance.csv"
- if($d.ShowDialog() -eq 'OK'){@($grid.Rows|ForEach-Object{[pscustomobject]@{Type=$_.Cells[0].Value;Name=$_.Cells[1].Value;Path=$_.Cells[2].Value}})|Export-Csv -LiteralPath $d.FileName -NoTypeInformation -Encoding UTF8};$d.Dispose()
-}
-$timer=New-Object Windows.Forms.Timer;$timer.Interval=300
-$timer.Add_Tick({
- if(!$script:job){return}
- foreach($r in @(Receive-Job $script:job -ErrorAction SilentlyContinue)){
-  $id="$($r.Kind)|$($r.Path)"
-  if(!$script:seen.ContainsKey($id)){Row $r.Kind $r.Name $r.Path;$script:seen[$id]=$true}
- }
- if($script:job.State -notin @('Running','NotStarted')){$status.Text="Scan $($script:job.State). $($grid.Rows.Count) entries; review before removal.";Remove-Job $script:job -Force -ErrorAction SilentlyContinue;$script:job=$null}
-})
-$timer.Start()
-$form.Add_FormClosed({$timer.Stop();if($script:job){Stop-Job $script:job -ErrorAction SilentlyContinue;Remove-Job $script:job -Force -ErrorAction SilentlyContinue}})
-[void]$form.ShowDialog()
-){throw 'Generic Folder name: review and remove manually instead.'}
-  if(@(Get-Process -ErrorAction SilentlyContinue|Where-Object{try{$_.Path -eq $p}catch{$false}}).Count){throw 'Close this running copy first.'}
-  if([Windows.Forms.MessageBox]::Show("Move ONLY this file to the Recycle Bin? Review its path. $p",'Confirm old build','YesNo','Warning') -eq 'Yes'){
-   [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin','ThrowException');$grid.Rows.Remove($grid.CurrentRow)
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Remove stale startup entry' {
- if(!$grid.CurrentRow -or $grid.CurrentRow.Cells[0].Value -ne 'Startup registry'){return}
- $parts=([string]$grid.CurrentRow.Cells[2].Value).Split('|',2)
- if($parts.Count -ne 2 -or $parts[0] -ne 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Run' -or $parts[1] -notmatch $regex){return}
- try{
-  $key=Get-Item -LiteralPath $parts[0];$command=[string]$key.GetValue($parts[1])
-  if($command -match '^\s*"([^"]+\.exe)"'){$exe=$Matches[1]}elseif($command -match '^\s*([^\s"]+\.exe)(?:\s|$)'){$exe=$Matches[1]}else{throw 'Cannot safely determine executable path.'}
-  $exe=[Environment]::ExpandEnvironmentVariables($exe)
-  if(![IO.Path]::IsPathRooted($exe) -or (Test-Path -LiteralPath $exe)){throw 'Target still exists or cannot be verified. Use Windows Startup Apps.'}
-  if([Windows.Forms.MessageBox]::Show("Remove this missing-target startup value only? $command. A backup is saved first.",'Stale startup entry','YesNo','Warning') -eq 'Yes'){
-   $backup=Join-Path $env:LOCALAPPDATA 'SACUAR\MaintenanceBackups';New-Item -ItemType Directory -Force $backup|Out-Null
-   $name=Join-Path $backup ("Run-"+[guid]::NewGuid()+".reg")
-   & reg.exe export 'HKCU\Software\Microsoft\Windows\CurrentVersion\Run' $name /y|Out-Null
-   if($LASTEXITCODE -ne 0){throw 'Registry backup failed.'}
-   Remove-ItemProperty -LiteralPath $parts[0] -Name $parts[1];$grid.Rows.Remove($grid.CurrentRow);$status.Text="Backup: $name"
-  }
- }catch{[void][Windows.Forms.MessageBox]::Show($_.Exception.Message,'Not removed')}
-}
-Button 'Export CSV' {
- $d=New-Object Windows.Forms.SaveFileDialog;$d.Filter='CSV (*.csv)|*.csv';$d.FileName="$App-maintenance.csv"
- if($d.ShowDialog() -eq 'OK'){@($grid.Rows|ForEach-Object{[pscustomobject]@{Type=$_.Cells[0].Value;Name=$_.Cells[1].Value;Path=$_.Cells[2].Value}})|Export-Csv -LiteralPath $d.FileName -NoTypeInformation -Encoding UTF8};$d.Dispose()
-}
-$timer=New-Object Windows.Forms.Timer;$timer.Interval=300
-$timer.Add_Tick({
- if(!$script:job){return}
- foreach($r in @(Receive-Job $script:job -ErrorAction SilentlyContinue)){
-  $id="$($r.Kind)|$($r.Path)"
-  if(!$script:seen.ContainsKey($id)){Row $r.Kind $r.Name $r.Path;$script:seen[$id]=$true}
- }
- if($script:job.State -notin @('Running','NotStarted')){$status.Text="Scan $($script:job.State). $($grid.Rows.Count) entries; review before removal.";Remove-Job $script:job -Force -ErrorAction SilentlyContinue;$script:job=$null}
-})
-$timer.Start()
-$form.Add_FormClosed({$timer.Stop();if($script:job){Stop-Job $script:job -ErrorAction SilentlyContinue;Remove-Job $script:job -Force -ErrorAction SilentlyContinue}})
-[void]$form.ShowDialog()
- -or [IO.File]::Exists((Join-Path $child 'Folder.exe')) -or [IO.File]::Exists((Join-Path $child 'explorer.py')))){[pscustomobject]@{Kind='Possible app folder';Name=$name;Path=$child}}
-    $stack.Push($child)
-   }
-  }catch{}
- }
- [pscustomobject]@{Kind='Scan summary';Name="$visited folders checked";Path=$(if($stack.Count){'Search limit reached; select a narrower folder'}else{'Accessible folders completed'})}
-}
-function Scan($roots){
- if($script:job -and $script:job.State -eq 'Running'){return}
- if($script:job){Remove-Job $script:job -Force -ErrorAction SilentlyContinue}
- $grid.Rows.Clear();$script:seen=@{};Inventory
- $json=ConvertTo-Json -InputObject @($roots) -Compress
- $script:job=Start-Job -ScriptBlock $worker -ArgumentList $json,$regex
- $status.Text='Scanning in background. No changes are being made.'
-}
-Button 'Quick scan' {Scan @([Environment]::GetFolderPath('Desktop'),[Environment]::GetFolderPath('MyDocuments'),(Join-Path $env:USERPROFILE 'Downloads'),(Join-Path $env:LOCALAPPDATA 'Programs'),$env:ProgramFiles,[Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),(Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\Startup'))}
-Button 'Scan fixed drives' {Scan @([IO.DriveInfo]::GetDrives()|Where-Object{$_.DriveType -eq 'Fixed' -and $_.IsReady}|ForEach-Object{$_.RootDirectory.FullName})}
-Button 'Scan folder' {$d=New-Object Windows.Forms.FolderBrowserDialog;if($d.ShowDialog() -eq 'OK'){Scan @($d.SelectedPath)};$d.Dispose()}
-Button 'Cancel scan' {if($script:job){Stop-Job $script:job -ErrorAction SilentlyContinue;$status.Text='Scan stopped.'}}
-Button 'Open selected location' {
- if(!$grid.CurrentRow){return};$p=[string]$grid.CurrentRow.Cells[2].Value
- if($p -and (Test-Path -LiteralPath $p -PathType Container)){Start-Process explorer.exe -ArgumentList ('"'+$p+'"')}
- elseif($p -and (Test-Path -LiteralPath $p -PathType Leaf)){Start-Process explorer.exe -ArgumentList ('/select,"'+$p+'"')}
-}
-Button 'Installed apps / uninstall' {Start-Process 'ms-settings:appsfeatures'}
-Button 'Running processes' {Start-Process taskmgr.exe}
-Button 'Recycle selected old file' {
- if(!$grid.CurrentRow -or $grid.CurrentRow.Cells[0].Value -ne 'Build / installer'){return}
- try{
-  $p=[IO.Path]::GetFullPath([string]$grid.CurrentRow.Cells[2].Value)
-  if(!(Test-Path -LiteralPath $p -PathType Leaf)){throw 'File no longer exists.'}
-  foreach($root in @($ProtectPath,$env:ProgramFiles,[Environment]::GetEnvironmentVariable('ProgramFiles(x86)'),$env:WINDIR,(Join-Path $env:LOCALAPPDATA 'Programs'),$env:ProgramData)|Where-Object{$_}){if($p.StartsWith(([IO.Path]::GetFullPath($root).TrimEnd('\')+'\'),[StringComparison]::OrdinalIgnoreCase)){throw 'Use the installed application uninstaller.'}}
-  if((Get-Item -LiteralPath $p).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Links are not removed.'}
-  if([IO.Path]::GetFileNameWithoutExtension($p) -notmatch $regex){throw 'Name no longer matches.'}
+  if($App -in @('Folder','All') -and [IO.Path]::GetFileNameWithoutExtension($p) -match '(?i)^folder$'){throw 'Generic Folder name: review manually instead.'}
   if(@(Get-Process -ErrorAction SilentlyContinue|Where-Object{try{$_.Path -eq $p}catch{$false}}).Count){throw 'Close this running copy first.'}
   if([Windows.Forms.MessageBox]::Show("Move ONLY this file to the Recycle Bin? Review its path. $p",'Confirm old build','YesNo','Warning') -eq 'Yes'){
    [Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile($p,'OnlyErrorDialogs','SendToRecycleBin','ThrowException');$grid.Rows.Remove($grid.CurrentRow)

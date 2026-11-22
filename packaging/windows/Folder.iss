@@ -39,7 +39,7 @@ Source: "..\..\dist\Folder\*"; DestDir: "{app}"; Flags: ignoreversion recursesub
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
-Name: "{autoprograms}\Folder maintenance"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\maintenance.ps1"" -App Folder -ProtectPath ""{app}"""; IconFilename: "{app}\Folder.exe"
+Name: "{autoprograms}\Folder maintenance"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -ExecutionPolicy Bypass -File ""{app}\maintenance.ps1"" -App Folder -ProtectPath ""{app}"""; IconFilename: "{app}\Folder.exe"
 Name: "{autoprograms}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"
 Name: "{autodesktop}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"; Tasks: desktopicon
 [Registry]
@@ -54,8 +54,10 @@ procedure OpenMaintenance(Sender: TObject);
 var Code: Integer;
 begin
   ExtractTemporaryFile('Setup-Maintenance.ps1');
-  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), '-NoProfile -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Setup-Maintenance.ps1') + '" -App Folder -ProtectPath "' + WizardDirValue + '"', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code) then
-    MsgBox('Unable to open installation maintenance.', mbError, MB_OK);
+  if not Exec(ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe'), '-NoProfile -STA -ExecutionPolicy Bypass -File "' + ExpandConstant('{tmp}\Setup-Maintenance.ps1') + '" -App Folder -ProtectPath "' + WizardDirValue + '"', '', SW_SHOWNORMAL, ewWaitUntilTerminated, Code) then
+    MsgBox('Unable to open installation maintenance.', mbError, MB_OK)
+  else if Code <> 0 then
+    MsgBox('Installation maintenance failed. Exit code: ' + IntToStr(Code), mbError, MB_OK);
 end;
 procedure InitializeWizard;
 var Page: TWizardPage; Info: TNewStaticText; Button: TNewButton;

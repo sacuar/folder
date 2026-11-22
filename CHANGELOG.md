@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.7.4
+- Repair malformed maintenance PowerShell script; preserve review-only cleanup protections.
+- Add Windows PowerShell syntax check and synthetic scan test before packaging.
+- Report maintenance exit errors instead of silently closing.
+
+
 ## 0.7.3 — Customisable toolbar
 - New folder and New file commands first, with configured file-type menu.
 - Browser-style + button at the right of the tab strip; optionally move into the command toolbar or hide.

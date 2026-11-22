@@ -2,7 +2,7 @@
 import os,sys,shutil,hashlib,subprocess
 from pathlib import Path
 from collections import defaultdict
-from PySide6.QtCore import QObject,Signal,QRunnable,QThreadPool,QUrl
+from PySide6.QtCore import QObject,Signal,QRunnable,QThreadPool,QUrl,QProcess
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import QDialog,QVBoxLayout,QLabel,QPlainTextEdit,QPushButton,QFileDialog,QMessageBox
 from modules.everything_search import count
@@ -77,8 +77,18 @@ def installation_maintenance(host):
     script=root/'maintenance.ps1'
     if not script.is_file():
         QMessageBox.information(host,'Installation maintenance','Available in the Windows installer or source directory.');return
-    try:subprocess.Popen(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(script),'-App','Folder','-ProtectPath',str(root)])
-    except OSError as exc:QMessageBox.warning(host,'Installation maintenance',str(exc))
+    previous=getattr(host,'maintenance_process',None)
+    if previous and previous.state()!=QProcess.NotRunning:return
+    proc=QProcess(host);host.maintenance_process=proc
+    proc.setProgram('powershell.exe')
+    proc.setArguments(['-NoProfile','-STA','-ExecutionPolicy','Bypass','-File',str(script),'-App','Folder','-ProtectPath',str(root)])
+    def finished(code,status):
+        if code or status!=QProcess.NormalExit:
+            error=bytes(proc.readAllStandardError()).decode(errors='replace').strip()
+            QMessageBox.warning(host,'Installation maintenance failed',error[-4000:] or f'Exit code: {code}')
+    proc.finished.connect(finished)
+    proc.errorOccurred.connect(lambda _:QMessageBox.warning(host,'Installation maintenance',proc.errorString()))
+    proc.start()
 def add_tools(host):
     menu=host.menuBar().addMenu('Tools')
     menu.addAction('Review old installations…',lambda:installation_maintenance(host)).setEnabled(sys.platform=='win32')
