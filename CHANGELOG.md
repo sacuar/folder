@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.1 — Windows media and visual polish
+- Embedded LibVLC provider, muted autoplay, looping, seek and volume.
+- Bundle official VLC runtime and codecs in Windows setup.
+- Original refined vector icons, smaller folder tiles and compact toolbar.
+- Visible Add-ons button and provider availability information.
+- Prefer separately installed Quick Photo Viewer for opening images.
+- Capture real workspace and add-on manager screenshots during Windows release build.
+- Windows runtime and playback require validation; independent plugin updates remain planned.
+
+
 ## 0.5.0 — Alpha (Windows first)
 - Thumbnail-first workspace with small, medium and large thumbnails plus Details mode.
 - Folder tree synchronisation, native Places icons, status bar and improved active pane.
