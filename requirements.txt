@@ -3,3 +3,5 @@ send2trash
 pyinstaller
 
 python-docx
+
+python-vlc
