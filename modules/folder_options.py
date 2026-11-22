@@ -5,7 +5,7 @@ from PySide6.QtCore import Qt
 from modules.create_items import TYPES,DEFAULT_TYPES
 
 CONTEXT=['Copy','Cut','Paste','Rename','Move to Recycle Bin','New','Extract archive…','Folder background','Open with','Play with']
-DEFAULTS={'view_mode':0,'theme':'Dark','thumbnails':True,'video_thumbnails':True,'show_hidden':False,'show_extensions':True,'single_click':False,'show_cloud':True,'show_email':True,'show_bookmarks':True,'show_web_search':True,'show_sidebar':True,'show_preview':True,'new_types':DEFAULT_TYPES,'context_items':CONTEXT,'auto_update_check':True}
+DEFAULTS={'view_mode':0,'theme':'Dark','thumbnails':True,'video_thumbnails':True,'show_hidden':False,'show_extensions':True,'single_click':False,'show_cloud':True,'show_email':True,'show_bookmarks':True,'show_web_search':True,'show_sidebar':True,'show_screenshot':True,'show_preview':True,'new_types':DEFAULT_TYPES,'context_items':CONTEXT,'auto_update_check':True}
 def options(host):
     prefs=deepcopy(host.prefs); d=QDialog(host);d.setWindowTitle('Folder Options');d.resize(620,570)
     layout=QVBoxLayout(d);tabs=QTabWidget();layout.addWidget(tabs)
