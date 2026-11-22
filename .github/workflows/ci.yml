@@ -19,7 +19,12 @@ jobs:
       - run: pip install -r requirements.txt
       - run: python -m compileall -q explorer.py modules platform_adapters integration.py addons.py
       - run: python -m unittest discover -s tests
-      - run: python -m PyInstaller --noconfirm --windowed --onedir --name Folder explorer.py
+      - if: runner.os == 'Windows'
+        run: python tools/build_icon.py
+      - if: runner.os == 'Windows'
+        run: python -m PyInstaller --clean --noconfirm --windowed --onedir --name Folder --icon assets/folder.ico --collect-all imageio_ffmpeg explorer.py
+      - if: runner.os == 'Linux'
+        run: python -m PyInstaller --noconfirm --windowed --onedir --name Folder explorer.py
       - uses: actions/upload-artifact@v4
         with:
           name: Folder-${{ runner.os }}
