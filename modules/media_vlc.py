@@ -89,6 +89,10 @@ class VideoPreview(QWidget):
             seconds=max(0,ms//1000); return f'{seconds//60}:{seconds%60:02}'
         self.label.setText(f'{fmt(self.player.get_time())} / {fmt(self.player.get_length())}  •  VLC  •  {state}')
 
+    def showEvent(self,event):
+        super().showEvent(event)
+        if self.player and not self.disposed and self.player.get_state() in (self.vlc.State.NothingSpecial,self.vlc.State.Stopped):QTimer.singleShot(0,self.start)
+
     def hideEvent(self,event):
         if self.player and self.player.is_playing():self.player.set_pause(1)
         super().hideEvent(event)
