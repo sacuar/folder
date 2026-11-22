@@ -18,6 +18,10 @@
 - Preview supported files including images, PDFs and selected document types.
 - Explore optional local add-ons, search integration, and file-management tools.
 
+## Ubuntu build
+
+**Ubuntu 24.04 x64 (preview):** Native `.deb` packaging, tabbed browsing, file previews, directory-based search and Linux file properties are implemented. Windows Everything indexing and registry integration are not used on Ubuntu. [Ubuntu installation and limitations](packaging/linux/README.md) · [Ubuntu workflow](https://github.com/sacuar/folder/actions/workflows/ubuntu-build.yml).
+
 ## Install / try
 
 Open **[GitHub Releases](https://github.com/sacuar/folder/releases)**, choose the latest suitable Windows asset, review its release notes and known limitations, and follow the installer instructions. If no verified installer is available, use the documented source-build instructions below. Download only from the official project release page.
