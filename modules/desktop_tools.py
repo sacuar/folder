@@ -47,14 +47,14 @@ def properties(host,path):
         try:
             st = p.stat()
             from datetime import datetime
-            details = (f'Name: {p.name}\nPath: {p}\n'
-                       f'Type: {"Directory" if p.is_dir() else "File"}\n'
-                       f'Size: {st.st_size:,} bytes\n'
-                       f'Modified: {datetime.fromtimestamp(st.st_mtime):%Y-%m-%d %H:%M}\n'
-                       f'Permissions: {oct(st.st_mode & 0o777)}')
-            QMessageBox.information(host,'File properties',details)
+            details = ("Name: {}\\nPath: {}\\nType: {}\\nSize: {:,} bytes\\n"
+                       "Modified: {}\\nPermissions: {}").format(
+                           p.name, p, "Directory" if p.is_dir() else "File",
+                           st.st_size, datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M"),
+                           oct(st.st_mode & 0o777))
+            QMessageBox.information(host, 'File properties', details)
         except OSError as exc:
-            QMessageBox.warning(host,'Properties',str(exc))
+            QMessageBox.warning(host, 'Properties', str(exc))
         return
     from ctypes import wintypes
     class Info(ctypes.Structure):
