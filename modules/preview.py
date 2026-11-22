@@ -1,5 +1,6 @@
 from pathlib import Path
 from modules.stl_preview import STLPreview
+from modules.fit_preview import FitPreview
 from modules.media_vlc import VideoPreview, MEDIA_EXTENSIONS
 from modules.photo_viewer import open_file
 from PySide6.QtCore import Qt,QUrl,QSize,QFileInfo
@@ -41,7 +42,7 @@ class Preview(QWidget):
                     item=QListWidgetItem(icons.icon(QFileInfo(str(f))),f.name); item.setData(Qt.UserRole,str(f)); w.addItem(item)
                 w.itemDoubleClicked.connect(lambda item:self.show_file(item.data(Qt.UserRole)))
             elif ext=='.stl':w=STLPreview(path)
-            elif ext=='.svg':w=QSvgWidget(path)
+            elif ext=='.svg':w=FitPreview(path,True)
             elif ext=='.pdf':
                 self.document=QPdfDocument(self); self.document.load(path); w=QPdfView(); w.setDocument(self.document); w.setPageMode(QPdfView.PageMode.MultiPage); w.setZoomMode(QPdfView.ZoomMode.FitToWidth); controls=QWidget(); row=QHBoxLayout(controls); row.setContentsMargins(0,0,0,0)
                 for label,fn in [('−',lambda:w.setZoomFactor(max(0.2,w.zoomFactor()/1.2))),('+',lambda:w.setZoomFactor(min(5,w.zoomFactor()*1.2))),('Fit',lambda:w.setZoomMode(QPdfView.ZoomMode.FitToWidth))]:
@@ -62,9 +63,6 @@ class Preview(QWidget):
                 from modules.archives import members
                 w=QPlainTextEdit('\n'.join(members(path)[:2000])); w.setReadOnly(True)
             else:
-                r=QImageReader(path); r.setAutoTransform(True); size=r.size(); w=QLabel(p.name); w.setAlignment(Qt.AlignCenter); w.setWordWrap(True)
-                if size.isValid():
-                    r.setScaledSize(size.scaled(QSize(1200,1600),Qt.KeepAspectRatio)); pix=QPixmap.fromImage(r.read()); w.setPixmap(pix); scroll=QScrollArea(); scroll.setWidget(w); scroll.setWidgetResizable(False); scroll.setAlignment(Qt.AlignCenter); w.adjustSize(); w=scroll
-                else:w.setText(p.name+'\nPreview unavailable')
-            self.layout_.addWidget(w)
+                w=FitPreview(path)
+            self.layout_.addWidget(w,1)
         except Exception as e:self.layout_.addWidget(QLabel('Preview unavailable: '+str(e)))
