@@ -2,7 +2,8 @@
 cd /d "%~dp0"
 py -3.12 -m venv .venv || goto fail
 .venv\Scripts\python.exe -m pip install -r requirements.txt || goto fail
-.venv\Scripts\python.exe -m PyInstaller --noconfirm --windowed --onedir --name Folder explorer.py || goto fail
+.venv\Scripts\python.exe tools\build_icon.py || goto fail
+.venv\Scripts\python.exe -m PyInstaller --clean --noconfirm --windowed --onedir --name Folder --icon assets\folder.ico --collect-all imageio_ffmpeg explorer.py || goto fail
 echo Built: dist\Folder\Folder.exe
 pause
 exit /b 0
