@@ -1,5 +1,6 @@
 """Shared desktop presentation; no filesystem operations."""
 from pathlib import Path
+from modules.icons import icon
 from PySide6.QtCore import Qt, QDir, QFileInfo, QStandardPaths, QSize
 from PySide6.QtWidgets import QFileIconProvider, QListWidgetItem, QListView, QStyle
 
@@ -18,16 +19,18 @@ def populate_places(side):
     locations.extend((d.absolutePath(),d.absolutePath()) for d in QDir.drives())
     for label,path in locations:
         if not path:continue
-        item=QListWidgetItem(icons.icon(QFileInfo(path)),label)
+        kind={'Home':'home','Desktop':'desktop','Downloads':'download','Documents':'document','Pictures':'image','Music':'music','Videos':'video'}.get(label,'drive')
+        item=QListWidgetItem(icon(kind),label)
         item.setData(Qt.UserRole,path)
         item.setToolTip(path)
         side.addItem(item)
 
 def configure_commands(toolbar):
     toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-    icons={'New tab':QStyle.SP_FileDialogNewFolder,'New folder':QStyle.SP_FileDialogNewFolder,'Recycle':QStyle.SP_TrashIcon,'Appearance':QStyle.SP_FileDialogDetailedView,'Split':QStyle.SP_FileDialogListView}
+    toolbar.setIconSize(QSize(19,19))
+    kinds={'New tab':'plus','Split':'split','New folder':'folder','Copy':'copy','Cut':'cut','Paste':'paste','Rename':'rename','Recycle':'trash','Appearance':'settings','Add-ons':'plugins'}
     for action in toolbar.actions():
-        if action.text() in icons:action.setIcon(toolbar.style().standardIcon(icons[action.text()]))
+        if action.text() in kinds:action.setIcon(icon(kinds[action.text()]))
 
 def apply_workspace_theme(host,prefs,windows):
     dark=prefs.get('theme','Dark')=='Dark'
@@ -43,7 +46,7 @@ def apply_workspace_theme(host,prefs,windows):
     QTreeView,QListView,QListWidget,QPlainTextEdit {{ background:{panel}; border:0; border-radius:5px; outline:0; }}
     QTreeView::item,QListWidget::item {{ padding:3px; min-height:19px; border-radius:4px; }}
     QTreeView::item:hover,QListView::item:hover,QListWidget::item:hover {{ background:{hover}; }}
-    QTreeView::item:selected,QListView::item:selected,QListWidget::item:selected,QToolButton:checked {{ background:{accent}; color:white; }}
+    QTreeView::item:selected,QListView::item:selected,QListWidget::item:selected {{ background:{hover}; color:{fg}; border:1px solid {accent}; border-radius:5px; }} QToolButton:checked {{ background:{accent}; color:white; }}
     QTabWidget::pane {{ border:0; }}
     QTabBar::tab {{ padding:7px 12px; margin:2px; border-radius:7px; background:{bg}; }}
     QTabBar::tab:selected {{ background:{panel}; border:1px solid {edge}; }}
