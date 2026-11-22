@@ -22,6 +22,9 @@ OutputBaseFilename=Folder-{#AppVersion}-Setup-x64
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile=..\..\assets\wizard.bmp
+WizardSmallImageFile=..\..\assets\wizard-small.bmp
+DisableWelcomePage=no
 CloseApplications=yes
 RestartApplications=no
 UninstallDisplayIcon={app}\Folder.exe
@@ -34,8 +37,8 @@ Source: "..\..\dist\Folder\*"; DestDir: "{app}"; Flags: ignoreversion recursesub
 Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
-Name: "{autoprograms}\Folder"; Filename: "{app}\Folder.exe"
-Name: "{autodesktop}\Folder"; Filename: "{app}\Folder.exe"; Tasks: desktopicon
+Name: "{autoprograms}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"
+Name: "{autodesktop}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"; Tasks: desktopicon
 [Registry]
 Root: HKCU; Subkey: "Software\FolderExplorer"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletevalue uninsdeletekeyifempty
 [Run]
