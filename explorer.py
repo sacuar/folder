@@ -19,6 +19,7 @@ from modules.create_items import add_new_menu
 from modules.open_with import launch_cached, choose_app
 from modules.web_links import populate_links, open_link, search_web
 from modules.drives import sidebar_menu
+from modules.screenshot import screenshot_dialog
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -138,10 +139,10 @@ class Explorer(QMainWindow):
         for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
             a=QAction(name,self); a.triggered.connect(fn); toolbar.addAction(a)
             if shortcut: a.setShortcut(QKeySequence(shortcut))
-        self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
+        self.screenshot_action=toolbar.addAction(icon('camera'),'Screenshot'); self.screenshot_action.triggered.connect(lambda:screenshot_dialog(self)); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
-        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
+        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder); self.addon_menu.addAction('Take screenshot…',lambda:screenshot_dialog(self))
         self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); self.apply_options()
     def open_place(self,item):
         value=item.data(Qt.UserRole)
@@ -151,7 +152,7 @@ class Explorer(QMainWindow):
         provider,ok=QInputDialog.getItem(self,'Web search','Search with:',['Google','ChatGPT','DeepSeek'],0,False)
         if ok:search_web(self,provider)
     def apply_options(self):
-        self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
+        self.screenshot_action.setVisible(self.prefs.get('show_screenshot',True)); self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
         self.side.clear(); populate_places(self.side); populate_links(self.side,self.prefs)
         for pane in self.findChildren(Pane):pane.apply_options()
     def addon_folder(self):
@@ -241,6 +242,9 @@ class Explorer(QMainWindow):
         apply_workspace_theme(self, self.prefs, IS_WINDOWS)
 
 if __name__=='__main__':
+    if IS_WINDOWS:
+        import ctypes
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID('sacuar.Folder.Desktop')
     app=QApplication(sys.argv); app.setApplicationName('Folder'); app.setWindowIcon(icon('app')); app.setApplicationVersion(VERSION); app.setStyle('Fusion'); w=Explorer(); w.show()
     if '--smoke-test' in sys.argv: QTimer.singleShot(1200,app.quit)
     sys.exit(app.exec())
