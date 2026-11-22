@@ -1,5 +1,6 @@
 """Shared desktop presentation; no filesystem operations."""
 from pathlib import Path
+from modules.drives import drive_kind
 from modules.icons import icon
 from PySide6.QtCore import Qt, QDir, QFileInfo, QStandardPaths, QSize
 from PySide6.QtWidgets import QFileIconProvider, QListWidgetItem, QListView, QStyle
@@ -16,7 +17,7 @@ def populate_places(side):
     locations=[('Home',str(Path.home()))]
     for label,kind in [('Desktop',QStandardPaths.DesktopLocation),('Downloads',QStandardPaths.DownloadLocation),('Documents',QStandardPaths.DocumentsLocation),('Pictures',QStandardPaths.PicturesLocation),('Music',QStandardPaths.MusicLocation),('Videos',QStandardPaths.MoviesLocation)]:
         locations.append((label,QStandardPaths.writableLocation(kind)))
-    locations.extend((d.absolutePath(),d.absolutePath()) for d in QDir.drives())
+    locations.extend((d.absolutePath()+'  '+drive_kind(d.absolutePath()),d.absolutePath()) for d in QDir.drives())
     for label,path in locations:
         if not path:continue
         kind={'Home':'home','Desktop':'desktop','Downloads':'download','Documents':'document','Pictures':'image','Music':'music','Videos':'video'}.get(label,'drive')
