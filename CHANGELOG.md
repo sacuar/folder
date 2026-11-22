@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.6.0 — Folder Options and extensibility
+- Configurable new-file templates and context menu choices.
+- STL preview, sampled mesh thumbnails and FFmpeg video frame thumbnails (on by default).
+- Remembered Open with / Play with application choices.
+- Cloud storage, mail and web search shortcuts; optional local sync folders.
+- Drive type labels and Windows safe-removal dialog.
+- Rounded splitters and scrollbars, multicolour application and installer icon.
+- Optional elevated installation, settings reset and thumbnail cache clearing.
+- Native Windows shell extensions and system-wide default folder replacement remain pending.
+
+
 ## 0.5.1 — Windows media and visual polish
 - Embedded LibVLC provider, muted autoplay, looping, seek and volume.
 - Bundle official VLC runtime and codecs in Windows setup.
