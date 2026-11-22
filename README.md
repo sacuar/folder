@@ -32,7 +32,23 @@ Open **[GitHub Releases](https://github.com/sacuar/folder/releases)**, choose th
 
 ## Screenshots and first look
 
-The current README contains a [workspace image](https://github.com/sacuar/folder/releases/latest/download/workspace.png) from release assets where published. The banner above is branding artwork, not an actual application screenshot.
+### Play video directly inside Folder
+
+**Browse files and preview video without opening a separate media player.** Folder's integrated LibVLC preview provides **Play / Pause, volume, mute, scrubbing, and playback time**, right beside the folder contents. On Windows the installer bundles LibVLC; on Ubuntu the system LibVLC runtime is required. Playback depends on the installed codecs and desktop environment.
+
+![Actual Folder file-management workspace with preview pane](https://github.com/sacuar/folder/releases/download/v0.7.9/workspace.png)
+
+*Actual application capture generated from synthetic local sample files during the Windows build. This workspace capture shows the interface; it does not claim to depict active video playback.*
+
+### Customise your workflow
+
+| Add-ons | Folder options |
+|:---:|:---:|
+| ![Actual Folder add-ons dialog](https://github.com/sacuar/folder/releases/download/v0.7.9/addons.png) | ![Actual Folder options dialog](https://github.com/sacuar/folder/releases/download/v0.7.9/options.png) |
+
+*Actual application dialogs from the Windows screenshot-generation step.*
+
+> **Video-preview demonstration:** Select a supported video file (for example, MP4) with the preview pane enabled. Folder opens its built-in player and exposes playback controls directly in the preview area. A verified, playing-video screenshot is still being prepared; promotional artwork is not presented as a real screen capture.
 
 ## Get involved
 
