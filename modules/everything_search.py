@@ -72,6 +72,9 @@ class SearchDock(QDockWidget):
         from PySide6.QtWidgets import QMenu
         m=QMenu(self);m.addAction('Open',lambda:self.open_result(item));m.addAction('Open containing folder',lambda:self.host.active().go(str(Path(item.data(Qt.UserRole)).parent)));m.exec(self.results.viewport().mapToGlobal(point))
 def open_search(host):
+    if sys.platform != 'win32':
+        from modules.linux_search import open_search as linux_open_search
+        return linux_open_search(host)
     if not hasattr(host,'everything_dock'):
         host.everything_dock=SearchDock(host);host.addDockWidget(Qt.BottomDockWidgetArea,host.everything_dock)
     start(); host.everything_dock.show();host.everything_dock.query.setFocus()
