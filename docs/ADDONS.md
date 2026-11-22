@@ -1,4 +1,4 @@
-# Add-ons available in Folder 0.5.1
+# Add-ons available in Folder 0.6.1
 
 Open **Add-ons → Manage plugins** (also available from the toolbar).
 
@@ -10,6 +10,7 @@ Open **Add-ons → Manage plugins** (also available from the toolbar).
 | DOCX preview | Built in; text and tables |
 | ZIP/TAR extraction | Built in |
 | Thumbnail engine | Built in |
+| Screenshot capture | Built in; window or display, delayed capture, PNG/JPEG export |
 | Quick Photo Viewer | External integration; install separately or locate executable |
 | Trusted Python extensions | Local .py files in the add-on directory; explicit loading |
 
