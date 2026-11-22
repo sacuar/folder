@@ -20,7 +20,7 @@ def options(host):
     general.addWidget(QLabel('Default file associations are controlled by Windows Settings.'))
     b=QPushButton('Windows Default Apps');b.clicked.connect(lambda:__import__('PySide6.QtGui',fromlist=['QDesktopServices']).QDesktopServices.openUrl(__import__('PySide6.QtCore',fromlist=['QUrl']).QUrl('ms-settings:defaultapps')));general.addWidget(b);general.addStretch()
     view=page('View')
-    for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_extensions','Show file extensions'),('show_sidebar','Show sidebar')]:check(view,key,label)
+    for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_sidebar','Show sidebar')]:check(view,key,label)
     view.addStretch()
     new=page('New items'); items={}
     for key,label in TYPES.items():
