@@ -23,6 +23,7 @@ from modules.favicons import Favicons
 from modules.sidebar import populate, context, update_icon, clip_folder, clip_label, add_bookmark, manage_services
 from modules.everything_search import open_search
 from modules.maintenance import add_tools
+from modules.web_popup import show_web
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -51,8 +52,11 @@ class Pane(QWidget):
         self.model=ThumbnailModel(self); self.model.prefs=window.prefs; self.model.setRootPath(''); self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot)
         self.view=View(); self.view.setModel(self.model); self.view.setIconSize(QSize(18,18)); self.view.setSelectionMode(QAbstractItemView.ExtendedSelection); self.view.setSortingEnabled(True); self.view.setColumnWidth(0,320); self.view.doubleClicked.connect(self.open); self.view.setContextMenuPolicy(Qt.CustomContextMenu); self.view.customContextMenuRequested.connect(self.menu); self.stack=QStackedWidget(); self.stack.addWidget(self.view)
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
-        mode=QComboBox(); mode.addItems(['Thumbnails','Details','Large thumbnails','Small thumbnails']); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
-        self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setIcon(icon('split')); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
+        mode=QComboBox();
+        for label,key in [('Medium thumbnails','grid'),('Details / no thumbnails','details'),('Large thumbnails','large'),('Small thumbnails','small')]:mode.addItem(icon(key),label)
+        mode.setToolTip('View size'); mode.setMinimumWidth(44); mode.setMaximumWidth(48 if not window.prefs.get('toolbar_labels',False) else 205); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
+        self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setIcon(icon('split')); self.preview_toggle.setToolTip('Toggle preview pane'); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if window.prefs.get('toolbar_labels',False) else Qt.ToolButtonIconOnly); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
+        self.clip_button=QToolButton();self.clip_button.setIcon(icon('paperclip'));self.clip_button.setToolTip('Clip / Unclip this folder');self.clip_button.clicked.connect(lambda:clip_folder(self.host,self.path));bar.addWidget(self.clip_button)
         self.preview=Preview(); self.preview.prefs=window.prefs; self.preview_toggle.toggled.connect(self.toggle_preview)
         layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,3); split.setStretchFactor(1,2); split.setSizes([720,320]); self.splitter=split
         self.preview.setVisible(self.preview_toggle.isChecked()); self.change_mode(mode.currentIndex(),persist=False)
@@ -63,6 +67,7 @@ class Pane(QWidget):
         self.apply_options(); self.go(path)
     def apply_options(self):
         prefs=self.host.prefs
+        self.mode.setMaximumWidth(205 if prefs.get('toolbar_labels',False) else 48); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if prefs.get('toolbar_labels',False) else Qt.ToolButtonIconOnly)
         self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot|(QDir.Hidden if prefs.get('show_hidden',False) else QDir.NoFilter))
         self.model.cache.clear(); self.gallery.viewport().update(); self.view.viewport().update()
         for v in (self.view,self.gallery):
@@ -71,7 +76,7 @@ class Pane(QWidget):
                 except (RuntimeError,TypeError):pass
             (v.clicked if prefs.get('single_click',False) else v.doubleClicked).connect(self.open)
     def change_mode(self,n,persist=True):
-        self.stack.setCurrentIndex(0 if n==1 else 1)
+        self.stack.setCurrentIndex(0 if n==1 else 1); self.model.prefs=self.host.prefs; self.model.cache.clear()
         size={0:56,2:104,3:32}.get(n,56)
         self.gallery.setIconSize(QSize(size,size)); self.gallery.setGridSize(QSize(size+40,size+34))
         if persist:
@@ -137,19 +142,26 @@ class Explorer(QMainWindow):
         super().__init__(); self.prefs=settings; self.clip=[]; self.cut=False; self.resize(1400,850); self.setMinimumSize(760,480); self.setWindowTitle('Folder'); self.setWindowIcon(icon('app')); self.last_pane=None
         root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_icons=FileIcons(); self.tree_model.setIconProvider(self.tree_icons); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for c in range(1,4): self.tree.hideColumn(c)
-        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
+        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); self.tree.setContextMenuPolicy(Qt.CustomContextMenu); self.tree.customContextMenuRequested.connect(self.tree_menu); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
         self.favicons=Favicons(self); self.favicons.ready.connect(lambda origin,ic:update_icon(self,origin,ic)); self.refresh_sidebar()
         self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:context(self,point))
         self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
-        toolbar=self.addToolBar('Commands'); toolbar.setMovable(False)
+        toolbar=self.addToolBar('Commands'); self.commands=toolbar; toolbar.setMovable(False)
         for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
             a=QAction(name,self); a.triggered.connect(fn); toolbar.addAction(a)
             if shortcut: a.setShortcut(QKeySequence(shortcut))
-        self.everything_action=toolbar.addAction('Everything search'); self.everything_action.triggered.connect(lambda:open_search(self)); self.everything_action.setShortcut(QKeySequence('Ctrl+Shift+F')); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
+        self.everything_action=toolbar.addAction('Everything search'); self.everything_action.triggered.connect(lambda:open_search(self)); self.everything_action.setShortcut(QKeySequence('Ctrl+Shift+F')); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(lambda:show_web(self)); configure_commands(toolbar,self.prefs.get('toolbar_labels',False)); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
-        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self); self.apply_options()
+        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self); self.menu_button=QToolButton(); self.menu_button.setIcon(icon('more'));self.menu_button.setToolTip('Application menus');self.menu_button.setPopupMode(QToolButton.InstantPopup); menu_popup=QMenu(self.menu_button)
+        for action in self.menuBar().actions():
+            if action.menu():menu_popup.addMenu(action.menu())
+        self.menu_button.setMenu(menu_popup);toolbar.addWidget(self.menu_button); self.apply_options()
+    def tree_menu(self,point):
+        index=self.tree.indexAt(point)
+        if not index.isValid():return
+        path=self.tree_model.filePath(index);m=QMenu(self);m.addAction(icon('unclip' if clip_label(self,path).startswith('Unclip') else 'paperclip'),clip_label(self,path),lambda:clip_folder(self,path));m.addAction('Open',lambda:self.active().go(path));m.exec(self.tree.viewport().mapToGlobal(point))
     def open_place(self,item):
         value=item.data(Qt.UserRole)
         if not isinstance(value,str):return
@@ -159,7 +171,7 @@ class Explorer(QMainWindow):
         provider,ok=QInputDialog.getItem(self,'Web search','Search with:',['Google','ChatGPT','DeepSeek'],0,False)
         if ok:search_web(self,provider)
     def apply_options(self):
-        self.apply_theme()
+        self.apply_theme(); configure_commands(self.commands,self.prefs.get('toolbar_labels',False)); self.menuBar().setVisible(self.prefs.get('show_menu_bar',False)); self.menu_button.setVisible(not self.prefs.get('show_menu_bar',False))
         self.everything_action.setVisible(self.prefs.get('show_everything',True)); self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
         self.refresh_sidebar()
         for pane in self.findChildren(Pane):pane.apply_options()

@@ -6,7 +6,7 @@ from PySide6.QtWidgets import QApplication,QInputDialog,QMessageBox,QListWidgetI
 from modules.icons import icon
 
 CLOUD={'Google Drive':'https://drive.google.com/','OneDrive':'https://onedrive.live.com/','MEGA':'https://mega.nz/','pCloud':'https://my.pcloud.com/','Dropbox':'https://www.dropbox.com/home','iCloud Drive':'https://www.icloud.com/iclouddrive/','Box':'https://app.box.com/'}
-EMAIL={'Gmail':'https://mail.google.com/','Outlook':'https://outlook.live.com/mail/','Microsoft 365 Outlook':'https://outlook.office.com/mail/'}
+EMAIL={'Yahoo Mail':'https://mail.yahoo.com/','Gmail':'https://mail.google.com/','Outlook':'https://outlook.live.com/mail/','Microsoft 365 Outlook':'https://outlook.office.com/mail/'}
 def open_link(url):
     if QUrl(url).scheme() in ('https','http'):QDesktopServices.openUrl(QUrl(url))
 

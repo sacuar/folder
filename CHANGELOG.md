@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.1
+- Compact icon toolbar, view-size controls and optional full menus / labels.
+- Clip/Unclip from sidebar folder tree and active folder toolbar.
+- Bundled portable Everything with index controls (Windows; service may require UAC).
+- Wikipedia in-app text results; browser alternatives for other providers.
+- Yahoo Mail favicon and organized Folder Options.
+
+
 ## 0.7.0 — Workspace polish
 - Aspect-fit image and SVG previews.
 - Clip/unclip folders and bookmarks, hide/restore cloud and mail shortcuts, cached favicons.

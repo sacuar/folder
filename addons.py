@@ -22,7 +22,7 @@ def manage_addons(host):
     table=QTreeWidget(); table.setHeaderLabels(['Provider','Status']); layout.addWidget(table)
     try:backend(); media='Available'
     except Exception as exc:media='Unavailable: '+str(exc)
-    for name,status in [('LibVLC video / audio',media),('Quick Photo Viewer','Detected' if locate_viewer(host.prefs) else 'Not installed / locate in Appearance'),('Raster / SVG preview','Built in'),('PDF preview','Built in'),('DOCX preview','Built in'),('ZIP / TAR extraction','Built in'),('STL mesh preview','Built in'),('Video frame thumbnails','Built in (FFmpeg runtime)'),('SVG thumbnail provider','Built in'),('Everything search','Built in bridge — requires Everything and ES'),('Thumbnail engine','Built in')]:
+    for name,status in [('LibVLC video / audio',media),('Quick Photo Viewer','Detected' if locate_viewer(host.prefs) else 'Not installed / locate in Appearance'),('Raster / SVG preview','Built in'),('PDF preview','Built in'),('DOCX preview','Built in'),('ZIP / TAR extraction','Built in'),('STL mesh preview','Built in'),('Video frame thumbnails','Built in (FFmpeg runtime)'),('SVG thumbnail provider','Built in'),('Everything search','Bundled Windows engine and CLI'),('Thumbnail engine','Built in')]:
         table.addTopLevelItem(QTreeWidgetItem([name,status]))
     ADDON_DIR.mkdir(parents=True,exist_ok=True)
     for p in sorted(ADDON_DIR.glob('*.py')):

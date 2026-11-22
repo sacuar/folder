@@ -42,6 +42,9 @@ jobs:
       - name: Bundle LibVLC runtime
         shell: pwsh
         run: ./packaging/windows/fetch_vlc.ps1 -Destination dist/Folder/vlc
+      - name: Bundle Everything portable indexing engine
+        shell: pwsh
+        run: ./packaging/windows/fetch_everything.ps1 -Destination dist/Folder/everything
       - name: Capture actual application screenshots
         shell: pwsh
         run: |

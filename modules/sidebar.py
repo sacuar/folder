@@ -45,19 +45,19 @@ def manage_services(host):
         else:hidden.append(url)
         host.save();host.refresh_sidebar()
 def clip_folder(host,path):
-    path=os.path.abspath(path)
+    path=os.path.normpath(os.path.abspath(path))
     if not os.path.isdir(path):return
     items=host.prefs.setdefault('clipped',{})
-    if path in items.values():
+    if any(os.path.normcase(os.path.normpath(v))==os.path.normcase(path) for v in items.values()):
         for key in list(items):
-            if items[key]==path:del items[key]
+            if os.path.normcase(os.path.normpath(items[key]))==os.path.normcase(path):del items[key]
     else:
         label=Path(path).name or path
         if label in items:label=path
         items[label]=path
     host.save();host.refresh_sidebar()
 def clip_label(host,path):
-    return 'Unclip folder' if path in host.prefs.get('clipped',{}).values() else 'Clip folder'
+    return 'Unclip folder' if os.path.normcase(os.path.normpath(path)) in [os.path.normcase(os.path.normpath(v)) for v in host.prefs.get('clipped',{}).values()] else 'Clip folder'
 def context(host,point):
     item=host.side.itemAt(point);menu=QMenu(host)
     if item:

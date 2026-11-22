@@ -6,7 +6,7 @@ from PySide6.QtCore import QObject,QUrl,QTimer,Signal
 from PySide6.QtGui import QIcon,QPixmap,QImageReader
 from PySide6.QtNetwork import QNetworkAccessManager,QNetworkRequest
 CACHE=Path.home()/'.folder_explorer'/'favicons'
-SITES={'mail.google.com':'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico','drive.google.com':'https://drive.google.com/favicon.ico','outlook.live.com':'https://outlook.live.com/favicon.ico','outlook.office.com':'https://outlook.office.com/favicon.ico'}
+SITES={'mail.yahoo.com':'https://mail.yahoo.com/favicon.ico','mail.google.com':'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico','drive.google.com':'https://drive.google.com/favicon.ico','outlook.live.com':'https://outlook.live.com/favicon.ico','outlook.office.com':'https://outlook.office.com/favicon.ico'}
 class Favicons(QObject):
     ready=Signal(str,object)
     def __init__(self,parent):
