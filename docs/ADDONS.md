@@ -14,3 +14,6 @@ Open **Add-ons → Manage plugins** (also available from the toolbar).
 | Trusted Python extensions | Local .py files in the add-on directory; explicit loading |
 
 Providers are separate source modules. Independent binary plug-in updates, signed add-on catalog, legacy DOC COM support and RAR/7z extraction are future work. No untrusted code is downloaded automatically.
+
+## 0.6.0 additions
+STL mesh preview and FFmpeg video thumbnail generation are built-in providers. SVG preview and thumbnails remain built in. These are not Windows Explorer COM shell extensions.
