@@ -1,5 +1,6 @@
 """Folder Options: editable preferences, not Windows registry policy."""
 from copy import deepcopy
+import sys
 from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QTabWidget,QWidget,QCheckBox,QComboBox,QLabel,QPushButton,QDialogButtonBox,QListWidget,QListWidgetItem,QInputDialog,QFileDialog,QMessageBox,QLineEdit)
 from PySide6.QtCore import Qt
 from modules.create_items import TYPES,DEFAULT_TYPES
@@ -18,8 +19,9 @@ def options(host,initial_tab=None):
     general=page('General')
     check(general,'single_click','Single-click to open items')
     check(general,'auto_update_check','Check for updates on startup')
-    general.addWidget(QLabel('Default file associations are controlled by Windows Settings.'))
-    b=QPushButton('Windows Default Apps');b.clicked.connect(lambda:__import__('PySide6.QtGui',fromlist=['QDesktopServices']).QDesktopServices.openUrl(__import__('PySide6.QtCore',fromlist=['QUrl']).QUrl('ms-settings:defaultapps')));general.addWidget(b);general.addStretch()
+    general.addWidget(QLabel('Default application associations are controlled by your operating system.'))
+    if sys.platform == 'win32':
+        b=QPushButton('Windows Default Apps');b.clicked.connect(lambda:__import__('PySide6.QtGui',fromlist=['QDesktopServices']).QDesktopServices.openUrl(__import__('PySide6.QtCore',fromlist=['QUrl']).QUrl('ms-settings:defaultapps')));general.addWidget(b);general.addStretch()
     view=page('Appearance & view')
     theme=QComboBox();theme.addItems(['Dark','Light']);theme.setCurrentText(prefs.get('theme','Dark'));view.addWidget(QLabel('Colour theme'));view.addWidget(theme)
     for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_sidebar','Show sidebar')]:check(view,key,label)
@@ -31,9 +33,15 @@ def options(host,initial_tab=None):
     check(toolbar,'show_menu_bar','Show full menu bar (otherwise use the three-dot menu)')
     editor=ToolbarEditor(prefs,d);toolbar.addWidget(editor,1)
     search=page('Search & indexing')
-    search.addWidget(QLabel('Everything is bundled on Windows. Full NTFS indexing may need its service.'))
-    for title,fn in [('Start search engine',lambda:__import__('modules.search_engine',fromlist=['start']).start()),('Rebuild index',lambda:__import__('modules.search_engine',fromlist=['reindex']).reindex()),('Enable Everything service (administrator)',lambda:__import__('modules.search_engine',fromlist=['install_service']).install_service())]:
-        b=QPushButton(title);b.clicked.connect(fn);search.addWidget(b)
+    if sys.platform == 'win32':
+        search.addWidget(QLabel('Everything is bundled on Windows. Full NTFS indexing may need its service.'))
+        for title,fn in [('Start search engine',lambda:__import__('modules.search_engine',fromlist=['start']).start()),('Rebuild index',lambda:__import__('modules.search_engine',fromlist=['reindex']).reindex()),('Enable Everything service (administrator)',lambda:__import__('modules.search_engine',fromlist=['install_service']).install_service())]:
+            b=QPushButton(title);b.clicked.connect(fn);search.addWidget(b)
+    else:
+        search.addWidget(QLabel('Ubuntu search scans the chosen directory, without modifying system indexes.'))
+        b=QPushButton('Search files…')
+        b.clicked.connect(lambda:__import__('modules.linux_search',fromlist=['open_search']).open_search(host))
+        search.addWidget(b)
     search.addStretch()
     new=page('New items'); items={}
     for key,label in TYPES.items():
