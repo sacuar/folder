@@ -51,7 +51,7 @@ def apply_workspace_theme(host,prefs,windows):
     QTabBar::tab {{ padding:7px 12px; margin:2px; border-radius:7px; background:{bg}; }}
     QTabBar::tab:selected {{ background:{panel}; border:1px solid {edge}; }}
     QHeaderView::section {{ background:{panel}; color:{fg}; border:0; padding:8px; }}
-    QSplitter::handle {{ background:{bg}; width:5px; height:5px; }}
+    QSplitter::handle {{ background:{edge}; border:1px solid {bg}; border-radius:3px; width:7px; height:7px; }} QSplitter::handle:hover {{ background:{accent}; }} QScrollBar:vertical {{ background:transparent; width:9px; margin:2px; }} QScrollBar::handle:vertical {{ background:{edge}; border-radius:4px; min-height:28px; }} QScrollBar::add-line:vertical,QScrollBar::sub-line:vertical {{ height:0; }}
     QMenu {{ background:{panel}; border:1px solid {edge}; padding:5px; }}
     QMenu::item {{ padding:7px 20px; }}
     QMenu::item:selected {{ background:{accent}; color:white; }}
