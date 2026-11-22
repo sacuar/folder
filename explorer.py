@@ -108,7 +108,7 @@ class Pane(QWidget):
     def open(self,index):
         path=self.model.filePath(index)
         if os.path.isdir(path): self.go(path)
-        else: launch_cached(path,self.host.prefs)
+        else: launch_cached(path,self.host.prefs); self.host.save()
     def selected(self): return [self.model.filePath(i) for i in (self.view.selectionModel().selectedRows(0) if self.stack.currentIndex()==0 else self.gallery.selectionModel().selectedIndexes())]
     def extract_archive(self):
         files=self.selected()

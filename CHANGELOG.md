@@ -1,3 +1,7 @@
+# 0.7.7
+- Route QPV image launches to complete installed packages rather than obsolete remembered build paths.
+- Internal image viewer fallback instead of broken Windows image associations; image viewer settings and targeted reset.
+
 # 0.7.6
 - Opt-in GitHub plugin catalogue, pinned integrity checks, 3MF preview, storage and conversion tools.
 

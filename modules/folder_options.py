@@ -8,7 +8,7 @@ from modules.toolbar_layout import ToolbarEditor
 CONTEXT=['Copy','Cut','Paste','Rename','Move to Recycle Bin','New','Extract archive…','Open with','Play with']
 DEFAULTS={'view_mode':0,'toolbar_labels':False,'show_menu_bar':False,'theme':'Dark','thumbnails':True,'video_thumbnails':True,'show_hidden':False,'show_extensions':True,'single_click':False,'show_cloud':True,'show_email':True,'show_bookmarks':True,'show_web_search':True,'show_sidebar':True,'show_everything':True,'fetch_favicons':True,'show_preview':True,'new_types':DEFAULT_TYPES,'context_items':CONTEXT,'auto_update_check':True}
 def options(host,initial_tab=None):
-    prefs=deepcopy(host.prefs); d=QDialog(host);d.setWindowTitle('Folder Options');d.resize(720,660)
+    prefs=deepcopy(host.prefs); prefs.setdefault('quick_photo_viewer',True); d=QDialog(host);d.setWindowTitle('Folder Options');d.resize(720,660)
     layout=QVBoxLayout(d);tabs=QTabWidget();layout.addWidget(tabs)
     controls={}
     def page(label):
@@ -85,4 +85,5 @@ def options(host,initial_tab=None):
         for key,b in controls.items():prefs[key]=b.isChecked()
         prefs['new_types']=[k for k,b in items.items() if b.isChecked()]
         prefs['context_items']=[k for k,b in menu_items.items() if b.isChecked()]
+        host.prefs.pop('photo_viewer_path',None)
         host.prefs.update(prefs);host.save();host.apply_options()

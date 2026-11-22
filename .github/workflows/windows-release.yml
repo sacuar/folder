@@ -42,6 +42,8 @@ jobs:
         shell: pwsh
         run: |
           $env:QT_QPA_PLATFORM='offscreen'
+          python tools/test_photo_launch.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_build_cleanup.py
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           python tools/test_toolbar.py
