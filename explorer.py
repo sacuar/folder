@@ -14,6 +14,10 @@ from PySide6.QtCore import QSize
 from addons import load_addons, manage_addons
 from modules.icons import icon, FileIcons
 from modules.photo_viewer import open_file
+from modules.folder_options import options, CONTEXT
+from modules.create_items import add_new_menu
+from modules.open_with import launch_cached, choose_app
+from modules.web_links import populate_links, open_link, search_web
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -39,7 +43,7 @@ class Pane(QWidget):
             b=QToolButton(); b.setIcon(icon({'←':'back','→':'forward','↑':'up','↻':'refresh'}[label])); b.setToolTip({'←':'Back','→':'Forward','↑':'Up','↻':'Refresh'}[label]); b.setIconSize(QSize(18,18)); b.clicked.connect(fn); bar.addWidget(b)
         self.address=QLineEdit(); self.address.setClearButtonEnabled(True); self.address.returnPressed.connect(lambda:self.go(self.address.text())); bar.addWidget(self.address,1)
         self.search=QLineEdit(); self.search.setPlaceholderText('Search this folder'); self.search.setClearButtonEnabled(True); self.search.setMaximumWidth(210); self.search.textChanged.connect(self.filter); bar.addWidget(self.search)
-        self.model=ThumbnailModel(self); self.model.setRootPath(''); self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot)
+        self.model=ThumbnailModel(self); self.model.prefs=window.prefs; self.model.setRootPath(''); self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot)
         self.view=View(); self.view.setModel(self.model); self.view.setIconSize(QSize(18,18)); self.view.setSelectionMode(QAbstractItemView.ExtendedSelection); self.view.setSortingEnabled(True); self.view.setColumnWidth(0,320); self.view.doubleClicked.connect(self.open); self.view.setContextMenuPolicy(Qt.CustomContextMenu); self.view.customContextMenuRequested.connect(self.menu); self.stack=QStackedWidget(); self.stack.addWidget(self.view)
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
         mode=QComboBox(); mode.addItems(['Thumbnails','Details','Large thumbnails','Small thumbnails']); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
@@ -51,7 +55,16 @@ class Pane(QWidget):
         for v in (self.view,self.gallery):
             v.selectionModel().currentChanged.connect(self.show_preview)
             v.selectionModel().selectionChanged.connect(lambda *_:self.status())
-        self.go(path)
+        self.apply_options(); self.go(path)
+    def apply_options(self):
+        prefs=self.host.prefs
+        self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot|(QDir.Hidden if prefs.get('show_hidden',False) else QDir.NoFilter))
+        self.model.cache.clear(); self.gallery.viewport().update(); self.view.viewport().update()
+        for v in (self.view,self.gallery):
+            for signal in (v.clicked,v.doubleClicked):
+                try:signal.disconnect(self.open)
+                except (RuntimeError,TypeError):pass
+            (v.clicked if prefs.get('single_click',False) else v.doubleClicked).connect(self.open)
     def change_mode(self,n,persist=True):
         self.stack.setCurrentIndex(0 if n==1 else 1)
         size={0:56,2:104,3:32}.get(n,56)
@@ -87,7 +100,7 @@ class Pane(QWidget):
     def open(self,index):
         path=self.model.filePath(index)
         if os.path.isdir(path): self.go(path)
-        else: open_file(path,self.host.prefs)
+        else: launch_cached(path,self.host.prefs)
     def selected(self): return [self.model.filePath(i) for i in (self.view.selectionModel().selectedRows(0) if self.stack.currentIndex()==0 else self.gallery.selectionModel().selectedIndexes())]
     def extract_archive(self):
         files=self.selected()
@@ -101,7 +114,14 @@ class Pane(QWidget):
         if index.isValid() and not v.selectionModel().isSelected(index):
             v.setCurrentIndex(index)
         v.setFocus(); m=QMenu(self)
-        for label,fn in [('Copy',lambda:self.host.capture(False)),('Cut',lambda:self.host.capture(True)),('Paste',self.host.paste),('Rename',self.host.rename),('Move to Recycle Bin',self.host.delete),('New folder',self.host.mkdir),('Extract archive…',self.extract_archive),('Folder background',lambda:self.host.background(True))]: m.addAction(label,fn)
+        enabled=self.host.prefs.get('context_items',CONTEXT)
+        for label,fn in [('Copy',lambda:self.host.capture(False)),('Cut',lambda:self.host.capture(True)),('Paste',self.host.paste),('Rename',self.host.rename),('Move to Recycle Bin',self.host.delete),('Extract archive…',self.extract_archive),('Folder background',lambda:self.host.background(True))]:
+            if label in enabled:m.addAction(label,fn)
+        if 'New' in enabled:add_new_menu(m,self)
+        if index.isValid() and not self.model.isDir(index):
+            path=self.model.filePath(index)
+            if 'Open with' in enabled:m.addAction('Open with…',lambda:choose_app(self,path,self.host.prefs))
+            if 'Play with' in enabled:m.addAction('Play with…',lambda:choose_app(self,path,self.host.prefs,True))
         m.exec(self.stack.currentWidget().viewport().mapToGlobal(point))
 
 class Explorer(QMainWindow):
@@ -109,19 +129,30 @@ class Explorer(QMainWindow):
         super().__init__(); self.prefs=settings; self.clip=[]; self.cut=False; self.resize(1400,850); self.setMinimumSize(760,480); self.setWindowTitle('Folder'); self.setWindowIcon(icon('app')); self.last_pane=None
         root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_icons=FileIcons(); self.tree_model.setIconProvider(self.tree_icons); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for c in range(1,4): self.tree.hideColumn(c)
-        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); nav.setMinimumWidth(160)
-        populate_places(self.side)
-        self.side.itemClicked.connect(lambda i:self.active().go(i.data(Qt.UserRole)))
+        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
+        populate_places(self.side); populate_links(self.side,self.prefs)
+        self.side.itemClicked.connect(self.open_place)
         self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
         toolbar=self.addToolBar('Commands'); toolbar.setMovable(False)
-        for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self))]:
+        for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
             a=QAction(name,self); a.triggered.connect(fn); toolbar.addAction(a)
             if shortcut: a.setShortcut(QKeySequence(shortcut))
-        configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
+        self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
-        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD)
+        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); self.apply_options()
+    def open_place(self,item):
+        value=item.data(Qt.UserRole)
+        if value.startswith(('https://','http://')):open_link(value)
+        else:self.active().go(value)
+    def choose_search(self):
+        provider,ok=QInputDialog.getItem(self,'Web search','Search with:',['Google','ChatGPT','DeepSeek'],0,False)
+        if ok:search_web(self,provider)
+    def apply_options(self):
+        self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
+        self.side.clear(); populate_places(self.side); populate_links(self.side,self.prefs)
+        for pane in self.findChildren(Pane):pane.apply_options()
     def addon_folder(self):
         from addons import ADDON_DIR
         ADDON_DIR.mkdir(parents=True,exist_ok=True); QDesktopServices.openUrl(QUrl.fromLocalFile(str(ADDON_DIR)))
