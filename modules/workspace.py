@@ -1,15 +1,16 @@
 """Shared desktop presentation; no filesystem operations."""
 from pathlib import Path
-from PySide6.QtCore import Qt, QDir, QFileInfo, QStandardPaths
+from PySide6.QtCore import Qt, QDir, QFileInfo, QStandardPaths, QSize
 from PySide6.QtWidgets import QFileIconProvider, QListWidgetItem, QListView, QStyle
 
 def configure_gallery(view):
     view.setMovement(QListView.Static)
     view.setUniformItemSizes(True)
-    view.setSpacing(4)
+    view.setSpacing(2)
     view.setWordWrap(True)
 
 def populate_places(side):
+    side.setIconSize(QSize(16,16))
     icons=QFileIconProvider()
     locations=[('Home',str(Path.home()))]
     for label,kind in [('Desktop',QStandardPaths.DesktopLocation),('Downloads',QStandardPaths.DownloadLocation),('Documents',QStandardPaths.DocumentsLocation),('Pictures',QStandardPaths.PicturesLocation),('Music',QStandardPaths.MusicLocation),('Videos',QStandardPaths.MoviesLocation)]:
@@ -33,18 +34,18 @@ def apply_workspace_theme(host,prefs,windows):
     accent='#397aca' if windows else '#c64600'
     bg,panel,fg,edge,hover=('#202124','#292b30','#f0f0f2','#3b3d43','#353942') if dark else ('#f4f5f7','#ffffff','#20242a','#dce0e4','#e8edf4')
     host.setStyleSheet(f"""
-    QWidget {{ background:{bg}; color:{fg}; font-size:13px; }}
+    QWidget {{ background:{bg}; color:{fg}; font-family:'Segoe UI'; font-size:12px; }}
     QToolBar {{ border:0; spacing:5px; padding:6px; }}
-    QToolButton,QPushButton,QComboBox {{ padding:7px 10px; border:1px solid {edge}; border-radius:6px; }}
+    QToolButton,QPushButton,QComboBox {{ padding:5px 8px; border:1px solid transparent; border-radius:6px; }}
     QToolButton:hover,QPushButton:hover,QComboBox:hover {{ background:{hover}; }}
     QLineEdit {{ padding:8px; background:{panel}; border:1px solid {edge}; border-radius:7px; }}
     QLineEdit:focus {{ border:1px solid {accent}; }}
-    QTreeView,QListView,QListWidget,QPlainTextEdit {{ background:{panel}; border:1px solid {edge}; border-radius:7px; outline:0; }}
-    QTreeView::item,QListWidget::item {{ padding:5px; min-height:22px; border-radius:4px; }}
+    QTreeView,QListView,QListWidget,QPlainTextEdit {{ background:{panel}; border:0; border-radius:5px; outline:0; }}
+    QTreeView::item,QListWidget::item {{ padding:3px; min-height:19px; border-radius:4px; }}
     QTreeView::item:hover,QListView::item:hover,QListWidget::item:hover {{ background:{hover}; }}
     QTreeView::item:selected,QListView::item:selected,QListWidget::item:selected,QToolButton:checked {{ background:{accent}; color:white; }}
     QTabWidget::pane {{ border:0; }}
-    QTabBar::tab {{ padding:10px 16px; margin:2px; border-radius:7px; background:{bg}; }}
+    QTabBar::tab {{ padding:7px 12px; margin:2px; border-radius:7px; background:{bg}; }}
     QTabBar::tab:selected {{ background:{panel}; border:1px solid {edge}; }}
     QHeaderView::section {{ background:{panel}; color:{fg}; border:0; padding:8px; }}
     QSplitter::handle {{ background:{bg}; width:5px; height:5px; }}
