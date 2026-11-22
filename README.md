@@ -35,7 +35,7 @@ Actual running application captures (demo files; Windows CI). These images follo
 | ZIP/TAR extraction | Built in |
 | Thumbnail engine | Built in |
 | STL preview and video thumbnails | Built in |
-| Screenshot capture | Built in; window / display, delay, PNG / JPEG |
+| Everything search | Built-in bridge; official Everything + ES required |
 | Quick Photo Viewer | Separate installation, detected automatically |
 | Trusted Python extensions | Local add-on directory |
 
@@ -52,3 +52,6 @@ Native COM preview handlers, DOC rendering, video thumbnails, RAR/7z extraction,
 
 ## 0.6.0 Windows workspace
 Folder Options includes thumbnail controls, hidden files, click mode, configurable New and context menus, sidebar shortcuts, cache reset and remembered applications. STL preview and video frame thumbnail generation are separate built-in providers. Cloud/email entries are browser bookmarks or user-selected local sync folders, not account connectors. Safe removal opens the Windows hardware dialog. Windows default apps remain user-controlled. Installer supports optional UAC elevation; Folder normally runs unprivileged. Native shell extensions are not registered by this release.
+
+## 0.7.0 workspace
+Responsive image/SVG previews, clipped folders and websites, cached website favicons, individually hideable cloud/email shortcuts, simplified appearance, compact Everything search, and Tools for file counts, drive usage, duplicate reports, cache clearing and Windows settings. Screenshot capture is removed from the active interface. Windows runtime verification is required.

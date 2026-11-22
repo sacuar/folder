@@ -28,9 +28,12 @@ class SearchDock(QDockWidget):
         self.results=QListWidget();self.results.setUniformItemSizes(True);l.addWidget(self.results,1);self.results.itemDoubleClicked.connect(self.open_result)
         self.results.setContextMenuPolicy(Qt.CustomContextMenu);self.results.customContextMenuRequested.connect(self.context)
         self.timer=QTimer(self);self.timer.setSingleShot(True);self.timer.setInterval(280);self.timer.timeout.connect(self.search);self.query.textChanged.connect(lambda _:self.timer.start())
-        self.proc=QProcess(self);self.proc.finished.connect(self.finished);self.proc.errorOccurred.connect(lambda _:self.status.setText('Unable to run Everything CLI.'))
+        self.proc=QProcess(self);self.proc.finished.connect(self.finished);self.proc.errorOccurred.connect(self.failed)
         self.timeout=QTimer(self);self.timeout.setSingleShot(True);self.timeout.timeout.connect(self.proc.kill);self.file=None;self.running_query=''
         self.visibilityChanged.connect(lambda on:self.stop() if not on else None)
+    def failed(self,error):
+        self.timeout.stop();self.status.setText('Unable to run Everything CLI.')
+        if self.file:self.file.unlink(missing_ok=True);self.file=None
     def choose(self):
         p,_=QFileDialog.getOpenFileName(self,'Select official Everything CLI (es.exe)','','Everything CLI (es.exe)')
         if p and Path(p).name.lower()=='es.exe':self.host.prefs['everything_es']=p;self.host.save();self.search()

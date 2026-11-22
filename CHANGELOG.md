@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — Workspace polish
+- Aspect-fit image and SVG previews.
+- Clip/unclip folders and bookmarks, hide/restore cloud and mail shortcuts, cached favicons.
+- Compact Everything integration; external engine and ES required.
+- Tools menu: installed apps/uninstall, Windows Update, cache reset, file counts, drive use and read-only duplicate reports.
+- Simplified appearance; decorative backgrounds suspended and screenshot command removed.
+
+
 ## 0.6.1 — Windows branding and screenshots
 - Original gold folder icon with blue slash-circle and mint accent.
 - Embed Windows EXE icons in both portable and installer builds, including CI.

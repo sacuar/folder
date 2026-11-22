@@ -4,8 +4,8 @@ from PySide6.QtWidgets import (QDialog,QVBoxLayout,QHBoxLayout,QTabWidget,QWidge
 from PySide6.QtCore import Qt
 from modules.create_items import TYPES,DEFAULT_TYPES
 
-CONTEXT=['Copy','Cut','Paste','Rename','Move to Recycle Bin','New','Extract archive…','Folder background','Open with','Play with']
-DEFAULTS={'view_mode':0,'theme':'Dark','thumbnails':True,'video_thumbnails':True,'show_hidden':False,'show_extensions':True,'single_click':False,'show_cloud':True,'show_email':True,'show_bookmarks':True,'show_web_search':True,'show_sidebar':True,'show_screenshot':True,'show_preview':True,'new_types':DEFAULT_TYPES,'context_items':CONTEXT,'auto_update_check':True}
+CONTEXT=['Copy','Cut','Paste','Rename','Move to Recycle Bin','New','Extract archive…','Open with','Play with']
+DEFAULTS={'view_mode':0,'theme':'Dark','thumbnails':True,'video_thumbnails':True,'show_hidden':False,'show_extensions':True,'single_click':False,'show_cloud':True,'show_email':True,'show_bookmarks':True,'show_web_search':True,'show_sidebar':True,'show_everything':True,'fetch_favicons':True,'show_preview':True,'new_types':DEFAULT_TYPES,'context_items':CONTEXT,'auto_update_check':True}
 def options(host):
     prefs=deepcopy(host.prefs); d=QDialog(host);d.setWindowTitle('Folder Options');d.resize(620,570)
     layout=QVBoxLayout(d);tabs=QTabWidget();layout.addWidget(tabs)
@@ -20,7 +20,7 @@ def options(host):
     general.addWidget(QLabel('Default file associations are controlled by Windows Settings.'))
     b=QPushButton('Windows Default Apps');b.clicked.connect(lambda:__import__('PySide6.QtGui',fromlist=['QDesktopServices']).QDesktopServices.openUrl(__import__('PySide6.QtCore',fromlist=['QUrl']).QUrl('ms-settings:defaultapps')));general.addWidget(b);general.addStretch()
     view=page('View')
-    for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_sidebar','Show sidebar'),('show_screenshot','Show screenshot button')]:check(view,key,label)
+    for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_sidebar','Show sidebar'),('show_everything','Show Everything search button')]:check(view,key,label)
     view.addStretch()
     new=page('New items'); items={}
     for key,label in TYPES.items():
@@ -31,7 +31,10 @@ def options(host):
         b=QCheckBox(label);b.setChecked(label in prefs.get('context_items',CONTEXT));context.addWidget(b);menu_items[label]=b
     context.addStretch()
     links=page('Sidebar & web')
-    for key,label in [('show_cloud','Cloud storage links'),('show_email','Email links'),('show_bookmarks','Bookmarks'),('show_web_search','Google / ChatGPT / DeepSeek search')]:check(links,key,label)
+    for key,label in [('show_cloud','Cloud storage links'),('show_email','Email links'),('show_bookmarks','Bookmarks'),('show_web_search','Google / ChatGPT / DeepSeek search'),('fetch_favicons','Automatically fetch and cache website icons')]:check(links,key,label)
+    links.addWidget(QLabel('Right-click sidebar items to Clip/Unclip or hide cloud and email shortcuts.'))
+    def restore_services():prefs['hidden_links']=[]
+    button=QPushButton('Restore cloud / email shortcuts');button.clicked.connect(restore_services);links.addWidget(button)
     def add_link():
         name,ok=QInputDialog.getText(d,'Bookmark','Name:')
         if not ok or not name.strip():return

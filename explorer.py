@@ -19,7 +19,10 @@ from modules.create_items import add_new_menu
 from modules.open_with import launch_cached, choose_app
 from modules.web_links import populate_links, open_link, search_web
 from modules.drives import sidebar_menu
-from modules.screenshot import screenshot_dialog
+from modules.favicons import Favicons
+from modules.sidebar import populate, context, update_icon, clip_folder, clip_label, add_bookmark, manage_services
+from modules.everything_search import open_search
+from modules.maintenance import add_tools
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -29,7 +32,7 @@ except Exception: settings={}
 class View(QTreeView):
     def paintEvent(self,event):
         super().paintEvent(event)
-        path=self.window().prefs.get('folders',{}).get(self.model().filePath(self.rootIndex()), self.window().prefs.get('image',''))
+        path='' # decorative backgrounds suspended for consistent readability
         pix=QPixmap(path or '')
         if not pix.isNull():
             p=QPainter(self.viewport()); p.setOpacity(self.window().prefs.get('opacity',20)/100)
@@ -117,9 +120,12 @@ class Pane(QWidget):
             v.setCurrentIndex(index)
         v.setFocus(); m=QMenu(self)
         enabled=self.host.prefs.get('context_items',CONTEXT)
-        for label,fn in [('Copy',lambda:self.host.capture(False)),('Cut',lambda:self.host.capture(True)),('Paste',self.host.paste),('Rename',self.host.rename),('Move to Recycle Bin',self.host.delete),('Extract archive…',self.extract_archive),('Folder background',lambda:self.host.background(True))]:
+        for label,fn in [('Copy',lambda:self.host.capture(False)),('Cut',lambda:self.host.capture(True)),('Paste',self.host.paste),('Rename',self.host.rename),('Move to Recycle Bin',self.host.delete),('Extract archive…',self.extract_archive)]:
             if label in enabled:m.addAction(label,fn)
         if 'New' in enabled:add_new_menu(m,self)
+        if index.isValid() and self.model.isDir(index):
+            selected=self.model.filePath(index); m.addAction(icon('paperclip'),clip_label(self.host,selected),lambda:clip_folder(self.host,selected))
+        elif not index.isValid():m.addAction(icon('paperclip'),clip_label(self.host,self.path),lambda:clip_folder(self.host,self.path))
         if index.isValid() and not self.model.isDir(index):
             path=self.model.filePath(index)
             if 'Open with' in enabled:m.addAction('Open with…',lambda:choose_app(self,path,self.host.prefs))
@@ -132,29 +138,33 @@ class Explorer(QMainWindow):
         root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_icons=FileIcons(); self.tree_model.setIconProvider(self.tree_icons); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for c in range(1,4): self.tree.hideColumn(c)
         self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
-        populate_places(self.side); populate_links(self.side,self.prefs)
-        self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:sidebar_menu(self,point))
+        self.favicons=Favicons(self); self.favicons.ready.connect(lambda origin,ic:update_icon(self,origin,ic)); self.refresh_sidebar()
+        self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:context(self,point))
         self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
         toolbar=self.addToolBar('Commands'); toolbar.setMovable(False)
         for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
             a=QAction(name,self); a.triggered.connect(fn); toolbar.addAction(a)
             if shortcut: a.setShortcut(QKeySequence(shortcut))
-        self.screenshot_action=toolbar.addAction(icon('camera'),'Screenshot'); self.screenshot_action.triggered.connect(lambda:screenshot_dialog(self)); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
+        self.everything_action=toolbar.addAction('Everything search'); self.everything_action.triggered.connect(lambda:open_search(self)); self.everything_action.setShortcut(QKeySequence('Ctrl+Shift+F')); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(self.choose_search); configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
-        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder); self.addon_menu.addAction('Take screenshot…',lambda:screenshot_dialog(self))
-        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); self.apply_options()
+        menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
+        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self); self.apply_options()
     def open_place(self,item):
         value=item.data(Qt.UserRole)
+        if not isinstance(value,str):return
         if value.startswith(('https://','http://')):open_link(value)
         else:self.active().go(value)
     def choose_search(self):
         provider,ok=QInputDialog.getItem(self,'Web search','Search with:',['Google','ChatGPT','DeepSeek'],0,False)
         if ok:search_web(self,provider)
     def apply_options(self):
-        self.screenshot_action.setVisible(self.prefs.get('show_screenshot',True)); self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
-        self.side.clear(); populate_places(self.side); populate_links(self.side,self.prefs)
+        self.apply_theme()
+        self.everything_action.setVisible(self.prefs.get('show_everything',True)); self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
+        self.refresh_sidebar()
         for pane in self.findChildren(Pane):pane.apply_options()
+    def refresh_sidebar(self):
+        self.side.clear(); populate_places(self.side); populate(self)
     def addon_folder(self):
         from addons import ADDON_DIR
         ADDON_DIR.mkdir(parents=True,exist_ok=True); QDesktopServices.openUrl(QUrl.fromLocalFile(str(ADDON_DIR)))
@@ -221,7 +231,8 @@ class Explorer(QMainWindow):
             for f in files:
                 try: send2trash(f)
                 except Exception as e: QMessageBox.warning(self,'Error',str(e))
-    def save(self): CONFIG.write_text(json.dumps(self.prefs,indent=2)); self.apply_theme(); [v.viewport().update() for v in self.findChildren(View)]
+    def save(self):
+        tmp=CONFIG.with_suffix('.tmp'); tmp.write_text(json.dumps(self.prefs,indent=2),encoding='utf-8'); tmp.replace(CONFIG)
     def background(self,folder=False):
         path,_=QFileDialog.getOpenFileName(self,'Background image','','Images (*.png *.jpg *.jpeg *.bmp *.webp)')
         if path:
@@ -229,15 +240,16 @@ class Explorer(QMainWindow):
             else:self.prefs['image']=path
             self.save()
     def appearance(self):
-        d=QDialog(self); d.setWindowTitle('Appearance'); l=QVBoxLayout(d); theme=QComboBox(); theme.addItems(['Dark','Light']); theme.setCurrentText(self.prefs.get('theme','Dark')); l.addWidget(theme); theme.currentTextChanged.connect(lambda s:(self.prefs.update(theme=s),self.save())); l.addWidget(QLabel('Background opacity')); slider=QSlider(Qt.Horizontal); slider.setRange(0,70); slider.setValue(self.prefs.get('opacity',20)); slider.valueChanged.connect(lambda n:(self.prefs.update(opacity=n),self.save())); l.addWidget(slider)
-        for name,fn in [('Choose global image',lambda:self.background()),('Choose folder image',lambda:self.background(True)),('Clear global image',lambda:(self.prefs.pop('image',None),self.save())),('Clear folder image',lambda:(self.prefs.get('folders',{}).pop(self.active().path,None),self.save()))]:
-            b=QPushButton(name); b.clicked.connect(fn); l.addWidget(b)
-        photo=QCheckBox('Use Quick Photo Viewer for images'); photo.setChecked(self.prefs.get('quick_photo_viewer',True)); photo.toggled.connect(lambda v:(self.prefs.update(quick_photo_viewer=v),self.save())); l.addWidget(photo)
-        def choose_viewer():
-            path,_=QFileDialog.getOpenFileName(self,'Choose QuickPhotoViewer.exe','','Executable (*.exe)')
-            if path:self.prefs['photo_viewer_path']=path; self.save()
-        b=QPushButton('Locate Quick Photo Viewer…'); b.clicked.connect(choose_viewer); l.addWidget(b)
-        d.exec()
+        d=QDialog(self);d.setWindowTitle('Appearance');l=QVBoxLayout(d)
+        l.addWidget(QLabel('Application theme'))
+        theme=QComboBox();theme.addItems(['Dark','Light']);theme.setCurrentText(self.prefs.get('theme','Dark'));l.addWidget(theme)
+        l.addWidget(QLabel('Changes apply to gallery, file list, menus and sidebar.'))
+        reset=QCheckBox('Remove existing decorative folder backgrounds');reset.setChecked(False);l.addWidget(reset)
+        buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel);buttons.accepted.connect(d.accept);buttons.rejected.connect(d.reject);l.addWidget(buttons)
+        if d.exec()==QDialog.Accepted:
+            self.prefs['theme']=theme.currentText()
+            if reset.isChecked():self.prefs.pop('image',None);self.prefs.pop('folders',None)
+            self.save();self.apply_theme()
     def apply_theme(self):
         apply_workspace_theme(self, self.prefs, IS_WINDOWS)
 

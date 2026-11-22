@@ -52,6 +52,6 @@ class Favicons(QObject):
                 self.failed[origin]=time.time();reply.deleteLater();QTimer.singleShot(0,self.pump)
         reply.finished.connect(finish)
     def clear(self):
-        self.epoch+=1;self.failed.clear();self.queue.clear()
+        self.epoch+=1;self.failed.clear();self.queue.clear();self.pending.clear()
         if CACHE.is_dir():
             for p in CACHE.glob('*.png'):p.unlink(missing_ok=True)

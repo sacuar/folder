@@ -7,6 +7,7 @@ from PySide6.QtWidgets import QFileIconProvider
 from pathlib import Path
 
 PATHS={
+ 'paperclip':'<path d="M8 14l7-7a3 3 0 0 1 4 4l-9 9a5 5 0 0 1-7-7l9-9"/>',
  'folder':'<path d="M3 7V5a2 2 0 0 1 2-2h5l3 3h6a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 9h18"/>',
  'home':'<path d="m3 10 9-7 9 7v10h-6v-7H9v7H3z"/>',
  'desktop':'<rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8m-4-4v4"/>',
