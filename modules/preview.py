@@ -1,4 +1,6 @@
 from pathlib import Path
+from modules.media_vlc import VideoPreview, MEDIA_EXTENSIONS
+from modules.photo_viewer import open_file
 from PySide6.QtCore import Qt,QUrl,QSize,QFileInfo
 from PySide6.QtWidgets import QWidget,QVBoxLayout,QLabel,QPlainTextEdit,QScrollArea,QPushButton,QHBoxLayout,QSlider,QFileIconProvider,QToolButton,QListWidget,QListWidgetItem
 from PySide6.QtGui import QPixmap,QImageReader,QDesktopServices
@@ -9,8 +11,10 @@ from PySide6.QtMultimedia import QMediaPlayer,QAudioOutput
 from PySide6.QtMultimediaWidgets import QVideoWidget
 class Preview(QWidget):
     def __init__(self):
-        super().__init__(); self.setMinimumWidth(200); self.layout_=QVBoxLayout(self); self.player=None; self.document=None; self.current_path=''; self.show_file('')
+        super().__init__(); self.setMinimumWidth(200); self.layout_=QVBoxLayout(self); self.player=None; self.document=None; self.current_path=''; self.media_preview=None; self.prefs={}; self.show_file('')
     def clear(self):
+        if self.media_preview:
+            self.media_preview.dispose(); self.media_preview=None
         if self.player:
             self.player.stop(); self.player.setSource(QUrl()); self.player.deleteLater(); self.player=None
         while self.layout_.count():
@@ -27,7 +31,7 @@ class Preview(QWidget):
             title=QLabel(p.name); title.setWordWrap(True); title.setTextFormat(Qt.PlainText); title.setStyleSheet('font-size:16px;font-weight:600;'); self.layout_.addWidget(title)
             info=p.stat()
             details=QLabel(('Folder' if p.is_dir() else f'{info.st_size:,} bytes')+'  •  '+(ext[1:].upper() or 'File')); self.layout_.addWidget(details)
-            open_button=QPushButton('Open externally'); open_button.clicked.connect(lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(path))); self.layout_.addWidget(open_button)
+            open_button=QPushButton('Open externally'); open_button.clicked.connect(lambda:open_file(path,self.prefs)); self.layout_.addWidget(open_button)
             if p.is_dir():
                 from itertools import islice
                 from PySide6.QtWidgets import QListWidget,QListWidgetItem,QFileIconProvider
@@ -41,14 +45,8 @@ class Preview(QWidget):
                 for label,fn in [('−',lambda:w.setZoomFactor(max(0.2,w.zoomFactor()/1.2))),('+',lambda:w.setZoomFactor(min(5,w.zoomFactor()*1.2))),('Fit',lambda:w.setZoomMode(QPdfView.ZoomMode.FitToWidth))]:
                     b=QPushButton(label); b.clicked.connect(fn); row.addWidget(b)
                 self.layout_.addWidget(controls)
-            elif ext in ('.mp4','.mkv','.webm','.mov','.avi','.mp3','.wav','.flac','.m4a'):
-                w=QWidget(); l=QVBoxLayout(w); video=QVideoWidget(); l.addWidget(video); self.player=QMediaPlayer(self); audio=QAudioOutput(self.player); audio.setMuted(True); self.player.setAudioOutput(audio); self.player.setVideoOutput(video); self.player.setLoops(QMediaPlayer.Loops.Infinite); self.player.setSource(QUrl.fromLocalFile(path)); b=QPushButton('Play / pause'); b.clicked.connect(lambda:self.player.pause() if self.player.playbackState()==QMediaPlayer.PlaybackState.PlayingState else self.player.play()); l.addWidget(b); b=QPushButton('Mute / unmute'); b.clicked.connect(lambda:audio.setMuted(not audio.isMuted())); l.addWidget(b); self.player.play()
-                player=self.player; seek=QSlider(Qt.Horizontal); seek.setRange(0,0); l.addWidget(seek)
-                player.durationChanged.connect(lambda n:seek.setRange(0,n))
-                player.positionChanged.connect(lambda n:seek.setValue(n) if not seek.isSliderDown() else None)
-                seek.sliderMoved.connect(player.setPosition)
-                volume=QSlider(Qt.Horizontal); volume.setRange(0,100); volume.setValue(50); audio.setVolume(.5); volume.valueChanged.connect(lambda n:audio.setVolume(n/100)); l.addWidget(QLabel('Volume')); l.addWidget(volume)
-                error=QLabel(); error.setWordWrap(True); l.addWidget(error); player.errorOccurred.connect(lambda *_:error.setText(player.errorString()))
+            elif ext in MEDIA_EXTENSIONS:
+                w=VideoPreview(path); self.media_preview=w
             elif ext=='.docx':
                 from docx import Document
                 d=Document(path); lines=[x.text for x in d.paragraphs]
