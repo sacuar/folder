@@ -43,7 +43,7 @@ class Job(QRunnable):
         self.signals.done.emit(self.path,img)
 class ThumbnailModel(QFileSystemModel):
     def __init__(self,parent=None):
-        super().__init__(parent); self.file_icons=FileIcons(); self.setIconProvider(self.file_icons); self.prefs={}; self.cache=OrderedDict(); self.pending=set(); self.signals=Signals(self); self.signals.done.connect(self.finished); self.pool=QThreadPool(self); self.pool.setMaxThreadCount(2); self.dataChanged.connect(self.invalidate_changed)
+        super().__init__(parent); self.file_icons=FileIcons(); self.setIconProvider(self.file_icons); self.prefs={}; self.cache=OrderedDict(); self.generate=True; self.pending=set(); self.signals=Signals(self); self.signals.done.connect(self.finished); self.pool=QThreadPool(self); self.pool.setMaxThreadCount(2); self.dataChanged.connect(self.invalidate_changed)
     def invalidate_changed(self,first,last,roles):
         if roles and all(r==Qt.DecorationRole for r in roles):return
         for row in range(first.row(),last.row()+1):
@@ -53,9 +53,9 @@ class ThumbnailModel(QFileSystemModel):
         if role==Qt.DecorationRole and index.column()==0 and index.isValid():
             p=self.filePath(index)
             ext=Path(p).suffix.lower()
-            if self.prefs.get('thumbnails',True) and (ext in ('.jpg','.jpeg','.png','.webp','.bmp','.gif','.tif','.tiff','.svg','.pdf','.stl') or (ext in VIDEO_EXTENSIONS and self.prefs.get('video_thumbnails',True))):
+            if self.generate and self.prefs.get('thumbnails',True) and (ext in ('.jpg','.jpeg','.png','.webp','.bmp','.gif','.tif','.tiff','.svg','.pdf','.stl') or (ext in VIDEO_EXTENSIONS and self.prefs.get('video_thumbnails',True))):
                 if p in self.cache:
-                    icon=self.cache[p]
+                    icon=self.cache[p]; self.cache.move_to_end(p)
                     if icon is not None:return icon
                 elif p not in self.pending and len(self.pending)<128:
                     self.pending.add(p); self.pool.start(Job(p,self.signals))
@@ -64,4 +64,4 @@ class ThumbnailModel(QFileSystemModel):
         self.pending.discard(p); self.cache[p]=None if img.isNull() else QIcon(QPixmap.fromImage(img))
         while len(self.cache)>512:self.cache.popitem(last=False)
         i=self.index(p)
-        if i.isValid():self.dataChanged.emit(i,i,[Qt.DecorationRole])
+        if i.isValid() and self.generate:self.dataChanged.emit(i,i,[Qt.DecorationRole])

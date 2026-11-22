@@ -31,14 +31,7 @@ try: settings=json.loads(CONFIG.read_text())
 except Exception: settings={}
 
 class View(QTreeView):
-    def paintEvent(self,event):
-        super().paintEvent(event)
-        path='' # decorative backgrounds suspended for consistent readability
-        pix=QPixmap(path or '')
-        if not pix.isNull():
-            p=QPainter(self.viewport()); p.setOpacity(self.window().prefs.get('opacity',20)/100)
-            pix=pix.scaled(self.viewport().size(),Qt.KeepAspectRatioByExpanding,Qt.SmoothTransformation)
-            p.drawPixmap((self.viewport().width()-pix.width())//2,(self.viewport().height()-pix.height())//2,pix)
+    pass
 
 class Pane(QWidget):
     def __init__(self,window,path):
@@ -50,14 +43,14 @@ class Pane(QWidget):
         self.address=QLineEdit(); self.address.setClearButtonEnabled(True); self.address.returnPressed.connect(lambda:self.go(self.address.text())); bar.addWidget(self.address,1)
         self.search=QLineEdit(); self.search.setPlaceholderText('Search this folder'); self.search.setClearButtonEnabled(True); self.search.setMaximumWidth(210); self.search.textChanged.connect(self.filter); bar.addWidget(self.search)
         self.model=ThumbnailModel(self); self.model.prefs=window.prefs; self.model.setRootPath(''); self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot)
-        self.view=View(); self.view.setModel(self.model); self.view.setIconSize(QSize(18,18)); self.view.setSelectionMode(QAbstractItemView.ExtendedSelection); self.view.setSortingEnabled(True); self.view.setColumnWidth(0,320); self.view.doubleClicked.connect(self.open); self.view.setContextMenuPolicy(Qt.CustomContextMenu); self.view.customContextMenuRequested.connect(self.menu); self.stack=QStackedWidget(); self.stack.addWidget(self.view)
+        self.view=View(); self.view.setModel(self.model); self.view.setIconSize(QSize(18,18)); self.view.setSelectionMode(QAbstractItemView.ExtendedSelection); self.view.setSortingEnabled(True); self.view.setUniformRowHeights(True); self.view.setColumnWidth(0,320); self.view.doubleClicked.connect(self.open); self.view.setContextMenuPolicy(Qt.CustomContextMenu); self.view.customContextMenuRequested.connect(self.menu); self.stack=QStackedWidget(); self.stack.addWidget(self.view)
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
         mode=QComboBox();
         for label,key in [('Medium thumbnails','grid'),('Details / no thumbnails','details'),('Large thumbnails','large'),('Small thumbnails','small')]:mode.addItem(icon(key),label)
         mode.setToolTip('View size'); mode.setMinimumWidth(44); mode.setMaximumWidth(48 if not window.prefs.get('toolbar_labels',False) else 205); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
         self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setIcon(icon('split')); self.preview_toggle.setToolTip('Toggle preview pane'); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if window.prefs.get('toolbar_labels',False) else Qt.ToolButtonIconOnly); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
         self.clip_button=QToolButton();self.clip_button.setIcon(icon('paperclip'));self.clip_button.setToolTip('Clip / Unclip this folder');self.clip_button.clicked.connect(lambda:clip_folder(self.host,self.path));bar.addWidget(self.clip_button)
-        self.preview=Preview(); self.preview.prefs=window.prefs; self.preview_toggle.toggled.connect(self.toggle_preview)
+        self.preview=Preview(); self.preview.prefs=window.prefs; self.preview_timer=QTimer(self); self.preview_timer.setSingleShot(True); self.preview_timer.setInterval(160); self.preview_timer.timeout.connect(self.load_preview); self.preview_toggle.toggled.connect(self.toggle_preview)
         layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,3); split.setStretchFactor(1,2); split.setSizes([720,320]); self.splitter=split
         self.preview.setVisible(self.preview_toggle.isChecked()); self.change_mode(mode.currentIndex(),persist=False)
         self.model.directoryLoaded.connect(lambda _:self.status())
@@ -76,7 +69,7 @@ class Pane(QWidget):
                 except (RuntimeError,TypeError):pass
             (v.clicked if prefs.get('single_click',False) else v.doubleClicked).connect(self.open)
     def change_mode(self,n,persist=True):
-        self.stack.setCurrentIndex(0 if n==1 else 1); self.model.prefs=self.host.prefs; self.model.cache.clear()
+        self.stack.setCurrentIndex(0 if n==1 else 1); self.model.prefs=self.host.prefs; self.model.generate=(n!=1)
         size={0:56,2:104,3:32}.get(n,56)
         self.gallery.setIconSize(QSize(size,size)); self.gallery.setGridSize(QSize(size+40,size+34))
         if persist:
@@ -86,7 +79,7 @@ class Pane(QWidget):
     def toggle_preview(self,enabled):
         self.preview.setVisible(enabled); self.host.prefs['preview_visible']=enabled; self.host.save()
         if enabled: self.show_preview(self.stack.currentWidget().currentIndex(),None)
-        else: self.preview.show_file('')
+        else: self.preview_timer.stop(); self.preview.show_file('')
 
     def status(self):
         if not hasattr(self,'path') or self.host.active() is not self:return
@@ -95,14 +88,18 @@ class Pane(QWidget):
 
     def show_preview(self,index,previous):
         if self.preview_toggle.isChecked() and self.stack.currentWidget().currentIndex()==index:
-            self.preview.show_file(self.model.filePath(index))
+            self.preview_timer.start()
         self.status()
+    def load_preview(self):
+        if not self.preview_toggle.isChecked():return
+        index=self.stack.currentWidget().currentIndex()
+        self.preview.show_file(self.model.filePath(index) if index.isValid() else '')
 
     def filter(self,s): self.model.setNameFilters(['*'+s+'*'] if s else ['*']); self.model.setNameFilterDisables(False)
     def go(self,path,record=True):
         path=os.path.abspath(os.path.expanduser(path.strip().strip('"')))
         if not os.path.isdir(path): return QMessageBox.warning(self,'Folder','Folder not found.')
-        self.preview.show_file(''); self.path=path; self.address.setText(path); self.view.setRootIndex(self.model.setRootPath(path)); self.gallery.setRootIndex(self.view.rootIndex()); self.search.clear()
+        self.preview_timer.stop(); self.preview.show_file(''); self.path=path; self.address.setText(path); self.view.setRootIndex(self.model.setRootPath(path)); self.gallery.setRootIndex(self.view.rootIndex()); self.search.clear()
         if record: self.history=self.history[:self.pos+1]+[path]; self.pos=len(self.history)-1
         self.host.update_title(); self.view.viewport().update(); self.status()
     def travel(self,n):

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.2
+- Installer maintenance page and Tools entry (review-first old build discovery).
+- Debounce preview loading, stop pending previews when navigating, skip thumbnails in Details mode, improve thumbnail LRU cache.
+- Larger, labelled application screenshots.
+- Treat repeated release builds as no-op publication rather than failure.
+
+
 ## 0.7.1
 - Compact icon toolbar, view-size controls and optional full menus / labels.
 - Clip/Unclip from sidebar folder tree and active folder toolbar.

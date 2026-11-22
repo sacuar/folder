@@ -2,7 +2,7 @@
 import sys,tempfile
 from pathlib import Path
 from PySide6.QtWidgets import QApplication
-from PySide6.QtGui import QImage,QColor,QPainter
+from PySide6.QtGui import QImage,QColor,QPainter,QLinearGradient,QFont
 from PySide6.QtCore import QTimer
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import explorer
@@ -15,14 +15,15 @@ with tempfile.TemporaryDirectory() as tmp:
     for name in ('Documents','Pictures','Projects','Videos','Downloads'):
         (root/name).mkdir()
     for name,color in [('Coast.png','#447c9b'),('Forest.png','#527c61'),('Studio.png','#c49672')]:
-        im=QImage(640,400,QImage.Format_RGB32); im.fill(QColor(color)); p=QPainter(im); p.setPen(QColor('white')); p.drawText(im.rect(),0x84,name); p.end(); im.save(str(root/name))
+        im=QImage(960,600,QImage.Format_RGB32); p=QPainter(im)
+        gradient=QLinearGradient(0,0,960,600);gradient.setColorAt(0,QColor(color));gradient.setColorAt(1,QColor('#172a40'));p.fillRect(im.rect(),gradient);p.setPen(QColor('#f1f5f9'));p.setFont(QFont('Segoe UI',28));p.drawText(im.rect(),0x84,name);p.end();im.save(str(root/name))
     (root/'Read me.txt').write_text('Folder — local files, clear previews, modular providers.',encoding='utf-8')
-    explorer.settings={'theme':'Dark','view_mode':0,'auto_update_check':False,'preview_visible':True}
-    w=explorer.Explorer(); w.resize(1280,800); w.active().go(str(root)); w.show()
+    explorer.settings={'theme':'Dark','view_mode':0,'auto_update_check':False,'preview_visible':True,'fetch_favicons':False,'show_menu_bar':True,'toolbar_labels':True}
+    w=explorer.Explorer(); w.resize(1600,1000); w.active().go(str(root)); w.show()
     out=Path('screenshots'); out.mkdir(exist_ok=True)
     def capture():
         pane=w.active(); pane.gallery.setCurrentIndex(pane.model.index(str(root/'Coast.png')))
-        pane.preview.show_file(str(root/'Coast.png'))
+        pane.preview_timer.stop(); pane.preview.show_file(str(root/'Coast.png'))
         w.statusBar().showMessage('Demo Library • example files')
         app.processEvents()
         if not w.grab().save(str(out/'workspace.png')):raise RuntimeError('Screenshot failed')

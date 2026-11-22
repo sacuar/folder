@@ -58,3 +58,6 @@ Responsive image/SVG previews, clipped folders and websites, cached website favi
 
 ## 0.7.1 compact search workspace
 Icon-only toolbar and three-dot menu by default; restore labels and menus in Folder Options. View sizes and preview buttons use icons. Clip/Unclip is available in the folder tree and address toolbar. Bundled portable Everything and ES run on demand; full NTFS indexing may require administrator-approved Everything service. Wikipedia article excerpts appear inside a closable dialog; Google, ChatGPT and DeepSeek open externally. Yahoo Mail and website favicons use local cache. No private files are sent to web search.
+
+### Installation maintenance
+From Setup or Tools → Review old installations, scan old builds and startup entries, review exact paths, and use Windows uninstallers. No automatic folder deletion or registry sweeping. Folder 0.7.2 also defers selection preview rendering and avoids thumbnail generation in Details mode.

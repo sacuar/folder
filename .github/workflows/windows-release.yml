@@ -110,6 +110,6 @@ jobs:
           $tag = "v$version"
           if ($env:GITHUB_REF.StartsWith('refs/tags/') -and $env:GITHUB_REF -ne "refs/tags/$tag") { throw "Tag and source version disagree" }
           gh release view $tag *> $null
-          if ($LASTEXITCODE -eq 0) { throw "Release already exists; bump version rather than overwrite" }
+          if ($LASTEXITCODE -eq 0) { Write-Host "Release already exists; no overwrite"; exit 0 }
           gh release create $tag "installer/installer/Folder-$version-Setup-x64.exe" "installer/installer/Folder-$version-Setup-x64.exe.sha256" "installer/screenshots/workspace.png" "installer/screenshots/addons.png" "installer/screenshots/options.png" --target $env:GITHUB_SHA --title "Folder $version (Alpha)" --notes-file CHANGELOG.md
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }

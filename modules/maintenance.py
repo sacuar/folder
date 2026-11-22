@@ -1,5 +1,5 @@
 """Non-destructive maintenance with bounded local scans in background threads."""
-import os,sys,shutil,hashlib
+import os,sys,shutil,hashlib,subprocess
 from pathlib import Path
 from collections import defaultdict
 from PySide6.QtCore import QObject,Signal,QRunnable,QThreadPool,QUrl
@@ -72,8 +72,16 @@ def clear_cache(host):
     QMessageBox.information(host,'Clear cache','Folder thumbnail and website-icon caches cleared. No Windows or personal files removed.')
 def windows_settings(url):
     if sys.platform=='win32':QDesktopServices.openUrl(QUrl(url))
+def installation_maintenance(host):
+    root=Path(sys.executable).parent if getattr(sys,'frozen',False) else Path(__file__).resolve().parents[1]
+    script=root/'maintenance.ps1'
+    if not script.is_file():
+        QMessageBox.information(host,'Installation maintenance','Available in the Windows installer or source directory.');return
+    try:subprocess.Popen(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(script),'-App','Folder','-ProtectPath',str(root)])
+    except OSError as exc:QMessageBox.warning(host,'Installation maintenance',str(exc))
 def add_tools(host):
     menu=host.menuBar().addMenu('Tools')
+    menu.addAction('Review old installations…',lambda:installation_maintenance(host)).setEnabled(sys.platform=='win32')
     menu.addAction('Everything search…',lambda:__import__('modules.everything_search',fromlist=['open_search']).open_search(host))
     menu.addAction('File count and drive usage…',lambda:storage(host))
     menu.addAction('Find duplicate files…',lambda:duplicates(host))
