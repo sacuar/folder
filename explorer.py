@@ -40,7 +40,7 @@ class Pane(QWidget):
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
         mode=QComboBox(); mode.addItems(['Thumbnails','Details','Large thumbnails','Small thumbnails']); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
         self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
-        self.preview=Preview(); self.preview.setVisible(self.preview_toggle.isChecked()); self.preview_toggle.toggled.connect(self.toggle_preview)
+        self.preview=Preview(); self.preview_toggle.toggled.connect(self.toggle_preview)
         layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,3); split.setStretchFactor(1,2); split.setSizes([720,320]); self.splitter=split
         self.preview.setVisible(self.preview_toggle.isChecked()); self.change_mode(mode.currentIndex(),persist=False)
         self.model.directoryLoaded.connect(lambda _:self.status())
@@ -115,7 +115,7 @@ class Explorer(QMainWindow):
             if shortcut: a.setShortcut(QKeySequence(shortcut))
         configure_commands(toolbar); self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
-        self.new_tab(); self.apply_theme()
+        self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
     def addon_folder(self):
         from addons import ADDON_DIR
