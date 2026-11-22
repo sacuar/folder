@@ -38,7 +38,7 @@ with tempfile.TemporaryDirectory() as tmp:
             if d:
                 d.grab().save(str(out/'options.png')); d.reject()
         QTimer.singleShot(400,grab_options)
-        options(w)
+        options(w,'Toolbar')
         app.quit()
     QTimer.singleShot(1800,capture)
     QTimer.singleShot(15000,app.quit)

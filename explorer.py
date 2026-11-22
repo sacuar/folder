@@ -15,7 +15,8 @@ from addons import load_addons, manage_addons
 from modules.icons import icon, FileIcons
 from modules.photo_viewer import open_file
 from modules.folder_options import options, CONTEXT
-from modules.create_items import add_new_menu
+from modules.create_items import add_new_menu, create_item, TYPES, DEFAULT_TYPES
+from modules.toolbar_layout import apply_layout
 from modules.open_with import launch_cached, choose_app
 from modules.web_links import populate_links, open_link, search_web
 from modules.drives import sidebar_menu
@@ -143,18 +144,43 @@ class Explorer(QMainWindow):
         self.favicons=Favicons(self); self.favicons.ready.connect(lambda origin,ic:update_icon(self,origin,ic)); self.refresh_sidebar()
         self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:context(self,point))
         self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
-        toolbar=self.addToolBar('Commands'); self.commands=toolbar; toolbar.setMovable(False)
-        for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
-            a=QAction(name,self); a.triggered.connect(fn); toolbar.addAction(a)
-            if shortcut: a.setShortcut(QKeySequence(shortcut))
-        self.everything_action=toolbar.addAction('Everything search'); self.everything_action.triggered.connect(lambda:open_search(self)); self.everything_action.setShortcut(QKeySequence('Ctrl+Shift+F')); self.web_search=toolbar.addAction('Web search'); self.web_search.triggered.connect(lambda:show_web(self)); configure_commands(toolbar,self.prefs.get('toolbar_labels',False)); self.statusBar().setSizeGripEnabled(False)
+        toolbar=self.addToolBar('Commands'); self.commands=toolbar; toolbar.setMovable(False); toolbar.setObjectName('FolderCommands')
+        self.command_actions={}
+        for key,name,shortcut,fn in [('new_tab','New tab','Ctrl+T',self.new_tab),('split','Split','Ctrl+Shift+D',self.split),('new_folder','New folder','Ctrl+Shift+N',self.mkdir),('copy','Copy','Ctrl+C',lambda:self.capture(False)),('cut','Cut','Ctrl+X',lambda:self.capture(True)),('paste','Paste','Ctrl+V',self.paste),('rename','Rename','F2',self.rename),('recycle','Recycle','Delete',self.delete),('appearance','Appearance',None,self.appearance),('addons','Add-ons',None,lambda:manage_addons(self)),('options','Folder options',None,lambda:options(self)),('everything','Everything search','Ctrl+Shift+F',lambda:open_search(self)),('web','Web search',None,lambda:show_web(self))]:
+            action=QAction(name,self); action.triggered.connect(fn); self.command_actions[key]=action
+            if shortcut: action.setShortcut(QKeySequence(shortcut)); self.addAction(action)
+        self.everything_action=self.command_actions['everything'];self.web_search=self.command_actions['web']
+        new_file=QAction(icon('document'),'New file',self);new_file.setToolTip('Create a file in the active folder')
+        file_menu=QMenu(self);new_file.setMenu(file_menu);file_menu.aboutToShow.connect(lambda:self.populate_new_files(file_menu));self.command_actions['new_file']=new_file
+        self.tab_plus=QToolButton(self.tabs);self.tab_plus.setIcon(icon('plus'));self.tab_plus.setToolTip('New tab (Ctrl+T)');self.tab_plus.setAccessibleName('New tab');self.tab_plus.clicked.connect(self.new_tab)
+        self.tabs.setCornerWidget(self.tab_plus,Qt.TopRightCorner)
+        spacer=QWidget(toolbar);spacer.setMinimumWidth(0);spacer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Preferred)
+        space_action=QWidgetAction(self);space_action.setDefaultWidget(spacer);self.command_actions['space']=space_action
+        toolbar.setContextMenuPolicy(Qt.CustomContextMenu);toolbar.customContextMenuRequested.connect(self.toolbar_menu)
+        self.statusBar().setSizeGripEnabled(False)
         QApplication.instance().focusChanged.connect(self.remember_focus)
         self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
-        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self); self.menu_button=QToolButton(); self.menu_button.setIcon(icon('more'));self.menu_button.setToolTip('Application menus');self.menu_button.setPopupMode(QToolButton.InstantPopup); menu_popup=QMenu(self.menu_button)
+        self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self)
+        view_menu=self.menuBar().addMenu('View');view_menu.addAction('Customise toolbar…',lambda:options(self,'Toolbar'));view_menu.addAction('Folder options…',lambda:options(self))
+        menu_popup=QMenu(self)
         for action in self.menuBar().actions():
             if action.menu():menu_popup.addMenu(action.menu())
-        self.menu_button.setMenu(menu_popup);toolbar.addWidget(self.menu_button); self.apply_options()
+        menus=QAction(icon('more'),'Application menus',self);menus.setToolTip('Application menus');menus.setMenu(menu_popup);self.command_actions['menus']=menus
+        self.apply_options()
+
+    def populate_new_files(self,menu):
+        menu.clear()
+        for key,label in TYPES.items():
+            if key!='folder' and key in self.prefs.get('new_types',DEFAULT_TYPES):
+                menu.addAction(label,lambda checked=False,k=key:self.create_new(k))
+        if not menu.actions():menu.addAction('Enable file types in Folder Options').setEnabled(False)
+    def create_new(self,kind):
+        pane=self.active()
+        if pane:create_item(pane,pane.path,kind)
+    def toolbar_menu(self,point):
+        menu=QMenu(self);menu.addAction('Customise toolbar…',lambda:options(self,'Toolbar'));menu.addAction('Folder options…',lambda:options(self));menu.exec(self.commands.mapToGlobal(point))
+
     def tree_menu(self,point):
         index=self.tree.indexAt(point)
         if not index.isValid():return
@@ -168,8 +194,7 @@ class Explorer(QMainWindow):
         provider,ok=QInputDialog.getItem(self,'Web search','Search with:',['Google','ChatGPT','DeepSeek'],0,False)
         if ok:search_web(self,provider)
     def apply_options(self):
-        self.apply_theme(); configure_commands(self.commands,self.prefs.get('toolbar_labels',False)); self.menuBar().setVisible(self.prefs.get('show_menu_bar',False)); self.menu_button.setVisible(not self.prefs.get('show_menu_bar',False))
-        self.everything_action.setVisible(self.prefs.get('show_everything',True)); self.nav.setVisible(self.prefs.get('show_sidebar',True)); self.web_search.setVisible(self.prefs.get('show_web_search',True))
+        self.apply_theme(); self.menuBar().setVisible(self.prefs.get('show_menu_bar',False)); apply_layout(self); configure_commands(self.commands,self.prefs.get('toolbar_labels',False)); self.nav.setVisible(self.prefs.get('show_sidebar',True))
         self.refresh_sidebar()
         for pane in self.findChildren(Pane):pane.apply_options()
     def refresh_sidebar(self):

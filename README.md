@@ -61,3 +61,6 @@ Icon-only toolbar and three-dot menu by default; restore labels and menus in Fol
 
 ### Installation maintenance
 From Setup or Tools → Review old installations, scan old builds and startup entries, review exact paths, and use Windows uninstallers. No automatic folder deletion or registry sweeping. Folder 0.7.2 also defers selection preview rendering and avoids thumbnail generation in Details mode.
+
+### Customisable toolbar (0.7.3)
+New folder and New file appear first by default; the plus button sits at the right of the tabs. Right-click the command toolbar → **Customise toolbar**, or open Folder Options → Toolbar. Drag commands to reorder, uncheck to hide them, move Flexible space to align the remaining commands to the opposite side, choose top or bottom, and choose the position of the New tab button. Settings persist; Ctrl+T remains available even when the New tab button is hidden. Restore default layout if needed. The three-dot application menu remains available when the full menu bar is hidden.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.3 — Customisable toolbar
+- New folder and New file commands first, with configured file-type menu.
+- Browser-style + button at the right of the tab strip; optionally move into the command toolbar or hide.
+- Drag-to-reorder toolbar editor, per-command visibility, flexible spacer, top/bottom placement, independent menu and button labels, persistent settings and reset.
+- Preserve shortcuts and an accessible application menu when buttons are hidden.
+- Add offscreen layout/preview smoke checks and capture the toolbar settings page.
+
+
 ## 0.7.2
 - Installer maintenance page and Tools entry (review-first old build discovery).
 - Debounce preview loading, stop pending previews when navigating, skip thumbnails in Details mode, improve thumbnail LRU cache.

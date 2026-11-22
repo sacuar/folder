@@ -29,7 +29,7 @@ def populate_places(side):
 def configure_commands(toolbar,labels=False):
     toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if labels else Qt.ToolButtonIconOnly)
     toolbar.setIconSize(QSize(19,19))
-    kinds={'New tab':'plus','Split':'split','New folder':'folder','Copy':'copy','Cut':'cut','Paste':'paste','Rename':'rename','Recycle':'trash','Appearance':'settings','Add-ons':'plugins','Folder options':'options','Everything search':'search','Web search':'web','Clip folder':'paperclip'}
+    kinds={'New tab':'plus','Split':'split','New folder':'folder','New file':'document','Application menus':'more','Copy':'copy','Cut':'cut','Paste':'paste','Rename':'rename','Recycle':'trash','Appearance':'settings','Add-ons':'plugins','Folder options':'options','Everything search':'search','Web search':'web','Clip folder':'paperclip'}
     for action in toolbar.actions():
         if action.text() in kinds:action.setIcon(icon(kinds[action.text()])); action.setToolTip(action.text())
 
