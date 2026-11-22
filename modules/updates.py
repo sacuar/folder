@@ -63,10 +63,12 @@ def installed_directory():
         return None
     try:
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\FolderExplorer") as key:
-            directory = Path(winreg.QueryValueEx(key, "InstallPath")[0]).resolve()
-        if directory == Path(sys.executable).resolve().parent:
-            return directory
+        for hive in (winreg.HKEY_CURRENT_USER,winreg.HKEY_LOCAL_MACHINE):
+            try:
+                with winreg.OpenKey(hive,r"Software\FolderExplorer") as key:
+                    directory=Path(winreg.QueryValueEx(key,"InstallPath")[0]).resolve()
+                if directory==Path(sys.executable).resolve().parent:return directory
+            except OSError:continue
     except OSError:
         pass
     return None
