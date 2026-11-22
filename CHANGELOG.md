@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.6.1 — Windows branding and screenshots
+- Original gold folder icon with blue slash-circle and mint accent.
+- Embed Windows EXE icons in both portable and installer builds, including CI.
+- Branded installer welcome panel and shortcut icons.
+- Screenshot add-on: window or selected display, delay, PNG/JPEG export.
+- Hide screenshot toolbar button in Folder Options.
+- README embeds real release screenshots; automatic capture includes Folder Options.
+
+
 ## 0.6.0 — Folder Options and extensibility
 - Configurable new-file templates and context menu choices.
 - STL preview, sampled mesh thumbnails and FFmpeg video frame thumbnails (on by default).
