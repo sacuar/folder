@@ -40,9 +40,10 @@ Source: "..\..\LICENSE"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion
 [Icons]
 Name: "{autoprograms}\Folder maintenance"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -STA -ExecutionPolicy Bypass -File ""{app}\maintenance.ps1"" -App Folder -ProtectPath ""{app}"""; IconFilename: "{app}\Folder.exe"
-Name: "{autoprograms}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"
+Name: "{autoprograms}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"; AppUserModelID: "sacuar.Folder.Desktop"
 Name: "{autodesktop}\Folder"; Filename: "{app}\Folder.exe"; IconFilename: "{app}\Folder.exe"; Tasks: desktopicon
 [Registry]
+Root: HKA; Subkey: "Software\Microsoft\Windows\CurrentVersion\App Paths\Folder.exe"; ValueType: string; ValueData: "{app}\Folder.exe"; Flags: uninsdeletekey
 Root: HKCU; Subkey: "Software\FolderExplorer"; ValueType: string; ValueName: "InstallPath"; ValueData: "{app}"; Flags: uninsdeletevalue uninsdeletekeyifempty
 [Run]
 Filename: "{app}\Folder.exe"; Description: "Launch Folder"; Flags: nowait postinstall skipifsilent

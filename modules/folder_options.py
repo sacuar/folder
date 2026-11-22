@@ -23,6 +23,8 @@ def options(host,initial_tab=None):
     view=page('Appearance & view')
     theme=QComboBox();theme.addItems(['Dark','Light']);theme.setCurrentText(prefs.get('theme','Dark'));view.addWidget(QLabel('Colour theme'));view.addWidget(theme)
     for key,label in [('thumbnails','Generate thumbnails'),('video_thumbnails','Generate video thumbnails'),('show_hidden','Show hidden files'),('show_sidebar','Show sidebar')]:check(view,key,label)
+    check(view,'show_scribble','Show Scribble button (temporary notes and calculator)')
+    check(view,'advanced_commands','Show advanced commands (administrator access)')
     view.addStretch()
     toolbar=page('Toolbar')
     check(toolbar,'toolbar_labels','Show text labels beside toolbar icons')

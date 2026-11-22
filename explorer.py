@@ -25,6 +25,8 @@ from modules.sidebar import populate, context, update_icon, clip_folder, clip_la
 from modules.everything_search import open_search
 from modules.maintenance import add_tools
 from modules.web_popup import show_web
+from modules.desktop_tools import properties,run_admin
+from modules.scratchpad import toggle as toggle_scribble
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -47,12 +49,13 @@ class Pane(QWidget):
         self.view=View(); self.view.setModel(self.model); self.view.setIconSize(QSize(18,18)); self.view.setSelectionMode(QAbstractItemView.ExtendedSelection); self.view.setSortingEnabled(True); self.view.setUniformRowHeights(True); self.view.setColumnWidth(0,320); self.view.doubleClicked.connect(self.open); self.view.setContextMenuPolicy(Qt.CustomContextMenu); self.view.customContextMenuRequested.connect(self.menu); self.stack=QStackedWidget(); self.stack.addWidget(self.view)
         self.gallery=QListView(); configure_gallery(self.gallery); self.gallery.setModel(self.model); self.gallery.setViewMode(QListView.IconMode); self.gallery.setIconSize(QSize(112,112)); self.gallery.setGridSize(QSize(150,155)); self.gallery.setWordWrap(True); self.gallery.setResizeMode(QListView.Adjust); self.gallery.setSelectionMode(QAbstractItemView.ExtendedSelection); self.gallery.doubleClicked.connect(self.open); self.gallery.setContextMenuPolicy(Qt.CustomContextMenu); self.gallery.customContextMenuRequested.connect(self.menu); self.stack.addWidget(self.gallery); layout.addWidget(self.stack,1)
         mode=QComboBox();
-        for label,key in [('Medium thumbnails','grid'),('Details / no thumbnails','details'),('Large thumbnails','large'),('Small thumbnails','small')]:mode.addItem(icon(key),label)
-        mode.setToolTip('View size'); mode.setMinimumWidth(44); mode.setMaximumWidth(48 if not window.prefs.get('toolbar_labels',False) else 205); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(4) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
+        for label,key in [('Medium thumbnails','grid'),('Details / no thumbnails','details'),('Large thumbnails','large'),('Small thumbnails','small'),('List','details')]:mode.addItem(icon(key),label)
+        mode.setToolTip('View size'); mode.setMinimumWidth(44); mode.setMaximumWidth(48 if not window.prefs.get('toolbar_labels',False) else 205); mode.setCurrentIndex(window.prefs.get('view_mode',0) if window.prefs.get('view_mode',0) in range(5) else 0); self.mode=mode; mode.currentIndexChanged.connect(self.change_mode); bar.addWidget(mode)
         self.preview_toggle=QToolButton(); self.preview_toggle.setText('Preview'); self.preview_toggle.setIcon(icon('split')); self.preview_toggle.setToolTip('Toggle preview pane'); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if window.prefs.get('toolbar_labels',False) else Qt.ToolButtonIconOnly); self.preview_toggle.setCheckable(True); self.preview_toggle.setChecked(window.prefs.get('preview_visible',True)); bar.addWidget(self.preview_toggle)
+        self.pad_button=QToolButton();self.pad_button.setText('✎');self.pad_button.setToolTip('Temporary Scribble notes');self.pad_button.clicked.connect(lambda:toggle_scribble(self.host));self.pad_button.setVisible(window.prefs.get('show_scribble',False));bar.addWidget(self.pad_button)
         self.clip_button=QToolButton();self.clip_button.setIcon(icon('paperclip'));self.clip_button.setToolTip('Clip / Unclip this folder');self.clip_button.clicked.connect(lambda:clip_folder(self.host,self.path));bar.addWidget(self.clip_button)
         self.preview=Preview(); self.preview.prefs=window.prefs; self.preview_timer=QTimer(self); self.preview_timer.setSingleShot(True); self.preview_timer.setInterval(160); self.preview_timer.timeout.connect(self.load_preview); self.preview_toggle.toggled.connect(self.toggle_preview)
-        layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,3); split.setStretchFactor(1,2); split.setSizes([720,320]); self.splitter=split
+        layout.removeWidget(self.stack); split=QSplitter(); split.addWidget(self.stack); split.addWidget(self.preview); layout.addWidget(split,1); split.setStretchFactor(0,5); split.setStretchFactor(1,1); split.setSizes([900,250]); self.splitter=split
         self.preview.setVisible(self.preview_toggle.isChecked()); self.change_mode(mode.currentIndex(),persist=False)
         self.model.directoryLoaded.connect(lambda _:self.status())
         for v in (self.view,self.gallery):
@@ -61,6 +64,7 @@ class Pane(QWidget):
         self.apply_options(); self.go(path)
     def apply_options(self):
         prefs=self.host.prefs
+        self.pad_button.setVisible(prefs.get('show_scribble',False))
         self.mode.setMaximumWidth(205 if prefs.get('toolbar_labels',False) else 48); self.preview_toggle.setToolButtonStyle(Qt.ToolButtonTextBesideIcon if prefs.get('toolbar_labels',False) else Qt.ToolButtonIconOnly)
         self.model.setFilter(QDir.AllEntries|QDir.NoDotAndDotDot|(QDir.Hidden if prefs.get('show_hidden',False) else QDir.NoFilter))
         self.model.cache.clear(); self.gallery.viewport().update(); self.view.viewport().update()
@@ -70,9 +74,9 @@ class Pane(QWidget):
                 except (RuntimeError,TypeError):pass
             (v.clicked if prefs.get('single_click',False) else v.doubleClicked).connect(self.open)
     def change_mode(self,n,persist=True):
-        self.stack.setCurrentIndex(0 if n==1 else 1); self.model.prefs=self.host.prefs; self.model.generate=(n!=1)
+        self.stack.setCurrentIndex(0 if n==1 else 1); self.model.prefs=self.host.prefs; self.model.generate=(n not in (1,4))
         size={0:56,2:104,3:32}.get(n,56)
-        self.gallery.setIconSize(QSize(size,size)); self.gallery.setGridSize(QSize(size+40,size+34))
+        self.gallery.setViewMode(QListView.ListMode if n==4 else QListView.IconMode); self.gallery.setIconSize(QSize(20,20) if n==4 else QSize(size,size)); self.gallery.setGridSize(QSize() if n==4 else QSize(size+40,size+34))
         if persist:
             self.host.prefs['view_mode']=n; self.host.save()
         self.status()
@@ -133,17 +137,23 @@ class Pane(QWidget):
             path=self.model.filePath(index)
             if 'Open with' in enabled:m.addAction('Open with…',lambda:choose_app(self,path,self.host.prefs))
             if 'Play with' in enabled:m.addAction('Play with…',lambda:choose_app(self,path,self.host.prefs,True))
+        sort=m.addMenu('Sort by')
+        for title,col in [('Name',0),('Size',1),('Type',2),('Date modified',3)]:
+            for direction,order in [('Ascending',Qt.AscendingOrder),('Descending',Qt.DescendingOrder)]:sort.addAction(title+' — '+direction,lambda checked=False,c=col,o=order:self.model.sort(c,o))
+        if index.isValid():
+            path=self.model.filePath(index);m.addAction('Properties…',lambda:properties(self,path))
+            if self.host.prefs.get('advanced_commands',False) and IS_WINDOWS and Path(path).suffix.lower()=='.exe':m.addAction('Run as administrator…',lambda:run_admin(self,path))
         m.exec(self.stack.currentWidget().viewport().mapToGlobal(point))
 
 class Explorer(QMainWindow):
     def __init__(self):
         super().__init__(); self.prefs=settings; self.clip=[]; self.cut=False; self.resize(1400,850); self.setMinimumSize(760,480); self.setWindowTitle('Folder'); self.setWindowIcon(icon('app')); self.last_pane=None
-        root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); nl.addWidget(QLabel('PLACES')); nl.addWidget(self.side,1); nl.addWidget(QLabel('FOLDERS')); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_icons=FileIcons(); self.tree_model.setIconProvider(self.tree_icons); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        root=QSplitter(); self.setCentralWidget(root); self.side=QListWidget(); nav=QWidget(); nl=QVBoxLayout(nav); nl.setContentsMargins(4,4,4,4); nl.setSpacing(8); self.places_toggle=QToolButton(); self.places_toggle.setText('Places / drives / shortcuts'); self.places_toggle.setCheckable(True);self.places_toggle.setChecked(True);nl.addWidget(self.places_toggle); self.nav_split=QSplitter(Qt.Vertical);nl.addWidget(self.nav_split,1);self.nav_split.addWidget(self.side);self.tree_toggle=QToolButton();self.tree_toggle.setText('Folder tree');self.tree_toggle.setCheckable(True);self.tree_toggle.setChecked(True);nl.addWidget(self.tree_toggle); self.tree=QTreeView(); self.tree_model=QFileSystemModel(self); self.tree_icons=FileIcons(); self.tree_model.setIconProvider(self.tree_icons); self.tree_model.setFilter(QDir.Dirs|QDir.NoDotAndDotDot|QDir.Drives); self.tree_model.setRootPath(''); self.tree.setModel(self.tree_model); self.tree.setHeaderHidden(True); self.tree.setAnimated(False); self.tree.setUniformRowHeights(True); self.tree.setIndentation(14); self.tree.setIconSize(QSize(16,16)); self.tree.setEditTriggers(QAbstractItemView.NoEditTriggers)
         for c in range(1,4): self.tree.hideColumn(c)
-        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); self.tree.setContextMenuPolicy(Qt.CustomContextMenu); self.tree.customContextMenuRequested.connect(self.tree_menu); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
+        self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); self.tree.setContextMenuPolicy(Qt.CustomContextMenu); self.tree.customContextMenuRequested.connect(self.tree_menu); self.nav_split.addWidget(self.tree);self.nav_split.setSizes([300,400]);self.places_toggle.toggled.connect(self.side.setVisible);self.tree_toggle.toggled.connect(self.tree.setVisible);root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(110);self.root_split=root
         self.favicons=Favicons(self); self.favicons.ready.connect(lambda origin,ic:update_icon(self,origin,ic)); self.refresh_sidebar()
         self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:context(self,point))
-        self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
+        self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([190,1210]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
         toolbar=self.addToolBar('Commands'); self.commands=toolbar; toolbar.setMovable(False); toolbar.setObjectName('FolderCommands')
         self.command_actions={}
         for key,name,shortcut,fn in [('new_tab','New tab','Ctrl+T',self.new_tab),('split','Split','Ctrl+Shift+D',self.split),('new_folder','New folder','Ctrl+Shift+N',self.mkdir),('copy','Copy','Ctrl+C',lambda:self.capture(False)),('cut','Cut','Ctrl+X',lambda:self.capture(True)),('paste','Paste','Ctrl+V',self.paste),('rename','Rename','F2',self.rename),('recycle','Recycle','Delete',self.delete),('appearance','Appearance',None,self.appearance),('addons','Add-ons',None,lambda:manage_addons(self)),('options','Folder options',None,lambda:options(self)),('everything','Everything search','Ctrl+Shift+F',lambda:open_search(self)),('web','Web search',None,lambda:show_web(self))]:
@@ -162,7 +172,7 @@ class Explorer(QMainWindow):
         self.new_tab(); self.apply_theme(); self.update_title()
         menu=self.menuBar().addMenu('Desktop integration'); menu.addAction('Register Open in Folder' if IS_WINDOWS else 'Register desktop launcher',lambda:self.registry(True)).setEnabled(not STORE_BUILD); menu.addAction('Remove registration',lambda:self.registry(False)).setEnabled(not STORE_BUILD); self.addon_menu=self.menuBar().addMenu('Add-ons'); self.addon_menu.addAction('Manage plugins…',lambda:manage_addons(self)); self.addon_menu.addAction('Load trusted add-ons…',lambda:load_addons(self)); self.addon_menu.addAction('Open add-on folder',self.addon_folder)
         self.updater=Updater(self,enabled=IS_WINDOWS and not STORE_BUILD); add_tools(self)
-        view_menu=self.menuBar().addMenu('View');view_menu.addAction('Customise toolbar…',lambda:options(self,'Toolbar'));view_menu.addAction('Folder options…',lambda:options(self))
+        view_menu=self.menuBar().addMenu('View');view_menu.addAction('Toggle sidebar',self.toggle_sidebar);view_menu.addAction('Scribble (temporary notes)',lambda:toggle_scribble(self));view_menu.addAction('Customise toolbar…',lambda:options(self,'Toolbar'));view_menu.addAction('Folder options…',lambda:options(self))
         from modules.plugin_catalog import Manager
         self.plugin_manager=Manager(self)
         menu_popup=QMenu(self)
@@ -171,6 +181,8 @@ class Explorer(QMainWindow):
         menus=QAction(icon('more'),'Application menus',self);menus.setToolTip('Application menus');menus.setMenu(menu_popup);self.command_actions['menus']=menus
         self.apply_options()
 
+    def toggle_sidebar(self):
+        self.prefs['show_sidebar']=not self.nav.isVisible();self.nav.setVisible(self.prefs['show_sidebar']);self.save()
     def populate_new_files(self,menu):
         menu.clear()
         for key,label in TYPES.items():

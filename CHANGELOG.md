@@ -1,3 +1,9 @@
+# 0.7.9
+- Wider workspace, smaller preview, resizable vertical sidebar sections and sidebar toggle.
+- List mode, sorting menu, native Windows properties and optional administrator command.
+- Temporary Scribble notes, arithmetic and calendar, hidden button by default.
+- Start menu shortcut application ID and App Paths registration.
+
 # 0.7.8
 - Use a background HTTPS downloader with GitHub API fallback, exact integrity verification, specific failure messages and verified manual installation.
 - Require real remote plugin download and synthetic 3MF thumbnail tests before release.
