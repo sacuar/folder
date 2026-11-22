@@ -7,6 +7,7 @@ from PySide6.QtCore import QTimer
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 import explorer
 from addons import manage_addons
+from modules.folder_options import options
 app=QApplication(sys.argv)
 app.setStyle('Fusion')
 with tempfile.TemporaryDirectory() as tmp:
@@ -31,6 +32,12 @@ with tempfile.TemporaryDirectory() as tmp:
                 d.grab().save(str(out/'addons.png')); d.accept()
         QTimer.singleShot(400,grab_dialog)
         manage_addons(w)
+        def grab_options():
+            d=app.activeModalWidget()
+            if d:
+                d.grab().save(str(out/'options.png')); d.reject()
+        QTimer.singleShot(400,grab_options)
+        options(w)
         app.quit()
     QTimer.singleShot(1800,capture)
     QTimer.singleShot(15000,app.quit)
