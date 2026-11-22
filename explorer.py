@@ -18,6 +18,7 @@ from modules.folder_options import options, CONTEXT
 from modules.create_items import add_new_menu
 from modules.open_with import launch_cached, choose_app
 from modules.web_links import populate_links, open_link, search_web
+from modules.drives import sidebar_menu
 from integration import register, unregister, IS_WINDOWS, STORE_BUILD
 
 CONFIG = Path.home()/'.folder_explorer.json'
@@ -131,7 +132,7 @@ class Explorer(QMainWindow):
         for c in range(1,4): self.tree.hideColumn(c)
         self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); nl.addWidget(self.tree,3); root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(160)
         populate_places(self.side); populate_links(self.side,self.prefs)
-        self.side.itemClicked.connect(self.open_place)
+        self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:sidebar_menu(self,point))
         self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([235,1165]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
         toolbar=self.addToolBar('Commands'); toolbar.setMovable(False)
         for name,shortcut,fn in [('New tab','Ctrl+T',self.new_tab),('Split','Ctrl+Shift+D',self.split),('New folder','Ctrl+Shift+N',self.mkdir),('Copy','Ctrl+C',lambda:self.capture(False)),('Cut','Ctrl+X',lambda:self.capture(True)),('Paste','Ctrl+V',self.paste),('Rename','F2',self.rename),('Recycle','Delete',self.delete),('Appearance',None,self.appearance),('Add-ons',None,lambda:manage_addons(self)),('Folder options',None,lambda:options(self))]:
