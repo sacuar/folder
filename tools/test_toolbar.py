@@ -13,6 +13,16 @@ with tempfile.TemporaryDirectory() as tmp:
     host=explorer.Explorer();host.show();app.processEvents()
     assert [a.text() for a in host.commands.actions()][:2]==['New folder','New file']
     assert host.tab_plus.isVisible()
+    assert host.tabs.count()==1 and host.tabs.tabBar().isHidden()
+    host.new_tab();app.processEvents()
+    assert host.tabs.count()==2 and host.tabs.tabBar().isVisible()
+    bar=host.tabs.tabBar();plus=host.tab_plus
+    assert 0<=plus.x()-bar.geometry().right()-1<=8, (bar.geometry(),plus.geometry())
+    original=[host.tabs.widget(i) for i in range(2)]
+    bar.moveTab(0,1);app.processEvents()
+    assert host.tabs.widget(1) is original[0] and host.tabs.widget(0) is original[1]
+    host.close_tab(1);app.processEvents()
+    assert host.tabs.count()==1 and host.tabs.tabBar().isHidden() and host.tab_plus.isVisible()
     host.prefs.update(toolbar_order=['copy','new_file','space','new_tab'],toolbar_hidden=['cut'],new_tab_position='toolbar',toolbar_position='bottom')
     host.apply_options();app.processEvents()
     assert host.commands.actions()[0]==host.command_actions['copy']

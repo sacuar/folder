@@ -1,3 +1,8 @@
+# 0.7.10
+- Hide the redundant single-folder tab and close button; retain the New tab control.
+- Place New tab immediately after the open tabs, with scrolling on narrow windows. Preserve tab reordering and existing toolbar preferences.
+- Add UI regression checks for one tab, multiple tabs, reordering and closing.
+
 # 0.7.9
 - Wider workspace, smaller preview, resizable vertical sidebar sections and sidebar toggle.
 - List mode, sorting menu, native Windows properties and optional administrator command.

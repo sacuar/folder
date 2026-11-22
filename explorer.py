@@ -17,6 +17,7 @@ from modules.photo_viewer import open_file
 from modules.folder_options import options, CONTEXT
 from modules.create_items import add_new_menu, create_item, TYPES, DEFAULT_TYPES
 from modules.toolbar_layout import apply_layout
+from modules.workspace_tabs import WorkspaceTabs
 from modules.open_with import launch_cached, choose_app
 from modules.web_links import populate_links, open_link, search_web
 from modules.drives import sidebar_menu
@@ -153,7 +154,7 @@ class Explorer(QMainWindow):
         self.tree.clicked.connect(lambda i:self.active().go(self.tree_model.filePath(i)) if self.tree_model.filePath(i) else None); self.tree.setContextMenuPolicy(Qt.CustomContextMenu); self.tree.customContextMenuRequested.connect(self.tree_menu); self.nav_split.addWidget(self.tree);self.nav_split.setSizes([300,400]);self.places_toggle.toggled.connect(self.side.setVisible);self.tree_toggle.toggled.connect(self.tree.setVisible);root.addWidget(nav); self.nav=nav; nav.setMinimumWidth(110);self.root_split=root
         self.favicons=Favicons(self); self.favicons.ready.connect(lambda origin,ic:update_icon(self,origin,ic)); self.refresh_sidebar()
         self.side.itemClicked.connect(self.open_place); self.side.setContextMenuPolicy(Qt.CustomContextMenu); self.side.customContextMenuRequested.connect(lambda point:context(self,point))
-        self.tabs=QTabWidget(); self.tabs.setTabsClosable(True); self.tabs.setMovable(True); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([190,1210]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
+        self.tabs=WorkspaceTabs(); self.tabs.tabCloseRequested.connect(self.close_tab); root.addWidget(self.tabs); root.setSizes([190,1210]); root.setStretchFactor(0,0); root.setStretchFactor(1,1); self.tabs.currentChanged.connect(lambda _:self.update_title())
         toolbar=self.addToolBar('Commands'); self.commands=toolbar; toolbar.setMovable(False); toolbar.setObjectName('FolderCommands')
         self.command_actions={}
         for key,name,shortcut,fn in [('new_tab','New tab','Ctrl+T',self.new_tab),('split','Split','Ctrl+Shift+D',self.split),('new_folder','New folder','Ctrl+Shift+N',self.mkdir),('copy','Copy','Ctrl+C',lambda:self.capture(False)),('cut','Cut','Ctrl+X',lambda:self.capture(True)),('paste','Paste','Ctrl+V',self.paste),('rename','Rename','F2',self.rename),('recycle','Recycle','Delete',self.delete),('appearance','Appearance',None,self.appearance),('addons','Add-ons',None,lambda:manage_addons(self)),('options','Folder options',None,lambda:options(self)),('everything','Everything search','Ctrl+Shift+F',lambda:open_search(self)),('web','Web search',None,lambda:show_web(self))]:
@@ -162,8 +163,7 @@ class Explorer(QMainWindow):
         self.everything_action=self.command_actions['everything'];self.web_search=self.command_actions['web']
         new_file=QAction(icon('document'),'New file',self);new_file.setToolTip('Create a file in the active folder')
         file_menu=QMenu(self);new_file.setMenu(file_menu);file_menu.aboutToShow.connect(lambda:self.populate_new_files(file_menu));self.command_actions['new_file']=new_file
-        self.tab_plus=QToolButton(self.tabs);self.tab_plus.setIcon(icon('plus'));self.tab_plus.setToolTip('New tab (Ctrl+T)');self.tab_plus.setAccessibleName('New tab');self.tab_plus.clicked.connect(self.new_tab)
-        self.tabs.setCornerWidget(self.tab_plus,Qt.TopRightCorner)
+        self.tab_plus=self.tabs.plus;self.tab_plus.clicked.connect(self.new_tab)
         spacer=QWidget(toolbar);spacer.setMinimumWidth(0);spacer.setSizePolicy(QSizePolicy.Expanding,QSizePolicy.Preferred)
         space_action=QWidgetAction(self);space_action.setDefaultWidget(spacer);self.command_actions['space']=space_action
         toolbar.setContextMenuPolicy(Qt.CustomContextMenu);toolbar.customContextMenuRequested.connect(self.toolbar_menu)

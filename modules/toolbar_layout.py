@@ -40,7 +40,7 @@ class ToolbarEditor(QWidget):
         layout.addWidget(self.items,1)
         layout.addWidget(QLabel('New tab button'))
         self.tab_position=QComboBox()
-        self.tab_position.addItem('Right of tabs (browser style)','tabs')
+        self.tab_position.addItem('Immediately after open tabs','tabs')
         self.tab_position.addItem('Custom position in command toolbar','toolbar')
         self.tab_position.addItem('Hidden (Ctrl+T still works)','hidden')
         layout.addWidget(self.tab_position)
@@ -91,6 +91,6 @@ def apply_layout(host):
         if key in ('new_file','menus'):
             widget=toolbar.widgetForAction(action)
             if isinstance(widget,QToolButton):widget.setPopupMode(QToolButton.InstantPopup)
-    host.tab_plus.setVisible(tab_pos not in ('toolbar','hidden'))
+    host.tabs.set_plus_visible(tab_pos not in ('toolbar','hidden'))
     desired=Qt.BottomToolBarArea if prefs.get('toolbar_position')=='bottom' else Qt.TopToolBarArea
     if host.toolBarArea(toolbar)!=desired:host.addToolBar(desired,toolbar)
