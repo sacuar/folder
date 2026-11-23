@@ -12,6 +12,14 @@
 
 </div>
 
+<div align="center">
+
+[![GitHub stars](https://img.shields.io/github/stars/sacuar/folder?style=flat&label=Stars)](https://github.com/sacuar/folder/stargazers) [![Windows installer downloads](https://img.shields.io/github/downloads/sacuar/folder/v0.7.9/Folder-0.7.9-Setup-x64.exe?style=flat&label=Windows%20downloads)](https://github.com/sacuar/folder/releases/tag/v0.7.9) [![Ubuntu package downloads](https://img.shields.io/github/downloads/sacuar/folder/v0.7.9/Folder-0.7.9-ubuntu24.04-amd64.deb?style=flat&label=Ubuntu%20downloads)](https://github.com/sacuar/folder/releases/tag/v0.7.9)
+
+[View visitors and referral sources](https://github.com/sacuar/folder/graphs/traffic) · [All releases](https://github.com/sacuar/folder/releases)
+
+</div>
+
 ## Why use Folder?
 
 - Navigate with tabs, a folder tree, multiple view modes and a configurable toolbar.
